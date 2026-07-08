@@ -1054,15 +1054,24 @@
                                                     <span className="text-[10px] font-black text-zinc-500">点击上传作品长图</span>
                                                     <span className="text-[8px] font-bold text-zinc-400 mt-1">（手机相册中长按图片，即可激活“多选”批量导入）</span>
                                                     
-                                                    <input type="file" ref={fileInputRef} onChange={(e)=>{
-                                                        const files = Array.from(e.target.files);
-                                                        files.forEach(f => {
-                                                            const r = new FileReader();
-                                                            r.onloadend = () => setForm(prev => ({...prev, images: [...prev.images, r.result]}));
-                                                            r.readAsDataURL(f);
-                                                        });
-                                                        e.target.value = ""; 
-                                                    }} className="hidden" multiple accept="image/*" />
+                                                    <input 
+                                                        type="file" 
+                                                        ref={fileInputRef} 
+                                                        className="hidden" 
+                                                        multiple 
+                                                        accept="image/*" 
+                                                        onChange={(e) => {
+                                                            const files = Array.from(e.target.files);
+                                                            if (files.length === 0) return;
+                                                            
+                                                            files.forEach(f => {
+                                                                const r = new FileReader();
+                                                                r.onloadend = () => setForm(prev => ({ ...prev, images: [...prev.images, r.result] }));
+                                                                r.readAsDataURL(f);
+                                                            });
+                                                            e.target.value = ""; 
+                                                        }} 
+                                                    />
                                                 </div>
                                                 
                                                 {/* 💡 移动端预览缩略图 */}
@@ -1202,7 +1211,6 @@
                                         className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
                                     >
                                         {accessToken && showAdminUI && (
-                                            /* 🍏 移动端触控优化：在手机端（md以下）按钮设为 opacity-100 永久可见，在桌面端保持 group-hover 隐藏/悬停显示 */
                                             <div className="absolute top-3 md:top-8 right-3 md:right-8 flex gap-1.5 md:gap-3 z-[99] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-2 md:group-hover:translate-y-0">
                                                 <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="arrow-up-circle" size={12}/></button>
                                                 <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="edit-3" size={12}/></button>
