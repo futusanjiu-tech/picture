@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PRO.FOLIO - 极速稳定画廊</title>
     
-    <!-- 🍏 PWA 手机 App 沉浸式全屏配置 (iOS 专属) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PRO.FOLIO">
     <link rel="apple-touch-icon" href="https://img.icons8.com/?size=512&id=118557&format=png">
     
-    <!-- 🤖 安卓 WebApp 沉浸式配置 -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
     
@@ -25,12 +23,26 @@
       }
     </script>
 
-    <!-- 加载核心工具库 (使用国内高速 CDN，彻底安全免翻墙) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* 🛠️ 优雅精细圆角滚动条样式 */
+        .no-scrollbar::-webkit-scrollbar {
+            height: 3px; /* 横向滚动条极细 */
+            width: 3px;  /* 纵向滚动条极细 */
+        }
+        .no-scrollbar::-webkit-scrollbar-track {
+            background: transparent; /* 轨道完全透明 */
+        }
+        .no-scrollbar::-webkit-scrollbar-thumb {
+            background: #e4e4e7; /* 极浅的微灰色，保持精致感 */
+            border-radius: 99px; /* 完美圆角 */
+        }
+        .no-scrollbar::-webkit-scrollbar-thumb:active {
+            background: #71717a; /* 按住滑动时稍稍加深 */
+        }
+
         .invisible-scroll-box { 
             max-height: 85vh; 
             overflow-y: auto !important; 
@@ -45,9 +57,9 @@
         /* 经典圆角 */
         .rounded-big { border-radius: 1.5rem; }
         
-        /* 💡 手机端轻量级双列瀑布流 */
+        /* 💡 手机端轻量级双列瀑布流：微调为淘宝同款 6px 紧凑间距 (0.375rem) */
         .gallery-columns {
-            column-gap: 1rem;
+            column-gap: 0.375rem;
             column-count: 2;
         }
         @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
@@ -426,7 +438,6 @@
             const fetchShaOnly = async (own, rep, br, tok) => {
                 try {
                     const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
-                    // 仅使用极简的随机数破除缓存，不再使用引发跨域失败的 Cache-Control 和 Pragma 头
                     const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}_${Math.random()}`;
                     const res = await fetch(apiUrl, { headers });
                     if (res.ok) {
@@ -447,14 +458,12 @@
                 const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${cacheBuster}`;
                 const rawUrl = `https://raw.githubusercontent.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
                 
-                // 💡 【极简且不被拦截的安全头】
                 const tokenHeaders = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
 
                 if (useApiFirst) {
                     try {
                         const res = await fetch(apiUrl, { headers: tokenHeaders });
                         
-                        // 强制校验响应状态
                         if (!res.ok) {
                             if (res.status === 404) {
                                 setProjects(LOCAL_FALLBACK_PROJECTS);
@@ -500,7 +509,7 @@
                             return;
                         } catch(rawErr) {
                             console.error("所有通道均失败", rawErr);
-                            triggerToast(`获取数据失败，请确认梯子是否开启或 Token 权限是否正常分配。`, "error");
+                            triggerToast(`获取数据失败，请确认网络代理是否开启或 Token 权限是否分配正常。`, "error");
                         }
                     }
                 }
@@ -568,8 +577,6 @@
                     };
 
                     const base64Content = b64EncodeUnicode(JSON.stringify(commitData));
-                    
-                    // 1. 获取最新锁：完全抛弃导致 Failed to fetch 的 CORS 危险头！
                     let sha = fileSha || localStorage.getItem('github_file_sha') || '';
                     const getShaUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}&t=${Date.now()}`;
                     
@@ -588,7 +595,6 @@
                         console.warn("获取 SHA 失败，尝试继续写入...");
                     }
 
-                    // 2. 写入数据
                     const saveUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
                     const payload = {
                         content: base64Content,
@@ -630,10 +636,10 @@
                 }
             };
 
-            // 💡 殿堂级智能抗失真图片压缩内核 (防爆容量超强版)
+            // 💡 殿堂级智能抗失真图片压缩内核 (带 img.onerror 防抱死死锁安全机制)
             const processImageSafe = async (base64Str, maxWidth = 1200, quality = 0.75) => {
                 const perform = (src, w, q) => new Promise(res => {
-                    const img = new Image(); img.src = src;
+                    const img = new Image(); 
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = img.width, height = img.height;
@@ -645,14 +651,20 @@
                         ctx.drawImage(img, 0, 0, width, height);
                         res(canvas.toDataURL('image/jpeg', q));
                     };
+                    // 安全防护：解析失败放行原图，100% 杜绝无限转圈
+                    img.onerror = () => res(null);
+                    img.src = src;
                 });
                 
                 let result = await perform(base64Str, maxWidth, quality);
-                // 防爆保护，无限死循环迭代直到小于 200KB 为止，100% 不崩！
+                if (!result) return base64Str;
+
                 while (result.length > 200000 && maxWidth > 400) {
                     maxWidth = Math.floor(maxWidth * 0.85);
                     quality = Math.max(0.4, quality - 0.1);
-                    result = await perform(base64Str, maxWidth, quality);
+                    let nextResult = await perform(base64Str, maxWidth, quality);
+                    if (!nextResult) break;
+                    result = nextResult;
                 }
                 return result;
             };
@@ -710,10 +722,7 @@
                         newProjectsList = [newProj, ...projects];
                     }
 
-                    // 同步到云端
                     await saveDataToGitHub(config, categories, newProjectsList);
-                    
-                    // 彻底破除白屏：只有当云端没有抛出异常，才会执行界面的渲染刷新！
                     setProjects(newProjectsList);
                     triggerToast("发布成功！作品已无缝锁入云端", "success");
 
@@ -844,7 +853,6 @@
 
             const availableYears = ['全部', ...new Set(projects.map(p => p.year).filter(Boolean))].sort((a,b) => b - a);
 
-            // 💡 新引导流程：手把手带用户配置 GitHub 极速数据库
             if (!owner || !repo) {
                 return (
                     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8">
@@ -889,7 +897,7 @@
                 <div className="min-h-screen bg-white text-zinc-900">
                     {/* 💡 全屏高阻断优雅同步加载遮罩 */}
                     {isSyncing && (
-                        <div className="fixed inset-0 z-[1000] bg-white/70 backdrop-blur-md flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+                        <div className="fixed inset-0 z-[1000] bg-white/70 backdrop-blur-md flex flex-col items-center justify-center gap-4">
                             <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-950 rounded-full animate-spin"></div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">正在与云端数据库同步中，请勿关闭或刷新网页...</p>
                         </div>
@@ -897,14 +905,14 @@
 
                     {/* 高端 Toast 通知 */}
                     {toast.show && (
-                        <div className="fixed top-8 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-[1000] bg-zinc-950 text-white rounded-full py-4 px-8 shadow-2xl flex items-center justify-center gap-3 animate-in slide-in-from-top-6 duration-300">
+                        <div className="fixed top-8 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-[1000] bg-zinc-950 text-white rounded-full py-4 px-8 shadow-2xl flex items-center justify-center gap-3">
                             <span className="text-xs font-bold leading-none text-center">{toast.message}</span>
                         </div>
                     )}
 
                     {/* 高端圆角确认对话框 */}
                     {confirmModal.show && (
-                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
+                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
                             <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
                                 <h3 className="text-sm font-black mb-6 text-zinc-900">{confirmModal.title}</h3>
                                 <div className="flex gap-4">
@@ -938,11 +946,11 @@
                     <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-4 md:px-10 max-w-gallery">
                         {/* 💡 管理后台功能板块 */}
                         {accessToken && showAdminUI && (
-                            <div className="space-y-6 mb-24 animate-in slide-in-from-top-6 duration-700 text-left">
+                            <div className="space-y-6 mb-24 text-left">
                                 <div className="p-6 md:p-10 bg-zinc-900 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
                                     <div className="text-left">
                                         <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 极速工作台</h3>
-                                        <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">通过 GitHub 官方 CORS 通道直连。已移除所有不兼容防缓存属性，100% 防止浏览器请求拦截！</p>
+                                        <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">通过 GitHub 官方 CORS 通道直连。已优化异步并发机制，多图读取顺畅不卡顿！</p>
                                     </div>
                                     <button onClick={() => { const t = document.createElement("textarea"); t.value = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); triggerToast('您的专属分享链接已复制！去发给客户看看吧。', 'success'); }} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl"><Icon name="share-2" size={14}/> 复制空间地址</button>
                                 </div>
@@ -968,7 +976,6 @@
                                                 <input type="file" ref={headerFileInputRef} onChange={handleHeaderUpload} className="hidden" accept="image/*" />
                                             </div>
 
-                                            {/* 💡 备份令牌功能 */}
                                             <div className="space-y-1 pt-2 border-t border-zinc-200">
                                                 <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">安全备份令牌 (防遗失)</label>
                                                 <div className="flex gap-2">
@@ -979,7 +986,6 @@
                                             <button type="button" onClick={() => saveDataToGitHub(config, categories, projects)} className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs rounded-xl uppercase shadow-md transition-colors">手动保存当前定制</button>
                                         </div>
 
-                                        {/* 💡 分类系统管理功能，直接一键同步 */}
                                         <div className="pt-4 border-t border-zinc-200">
                                             <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-3 flex items-center gap-1"><Icon name="layers" size={12}/> 分类管理中心</h4>
                                             <div className="flex flex-wrap gap-1.5 mb-4">
@@ -1048,27 +1054,41 @@
                                                 <textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-big px-6 py-4 outline-none text-xs h-24 shadow-sm" placeholder="作品简述..." />
                                             </div>
                                             <div className="space-y-4">
-                                                {/* 💡 触控区域 */}
+                                                {/* 💡 触控多选区域 */}
                                                 <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-zinc-200 rounded-big p-6 flex flex-col items-center justify-center cursor-pointer bg-white hover:border-zinc-400 h-[120px] shadow-sm group text-center active:bg-zinc-50">
                                                     <Icon name="upload" size={28} className="text-zinc-300 mb-2 group-hover:scale-110 transition-transform"/>
                                                     <span className="text-[10px] font-black text-zinc-500">点击上传作品长图</span>
                                                     <span className="text-[8px] font-bold text-zinc-400 mt-1">（手机相册中长按图片，即可激活“多选”批量导入）</span>
                                                     
-                                                    <input type="file" ref={fileInputRef} onChange={(e)=>{
-                                                        const files = Array.from(e.target.files);
-                                                        files.forEach(f => {
-                                                            const r = new FileReader();
-                                                            r.onloadend = () => setForm(prev => ({...prev, images: [...prev.images, r.result]}));
-                                                            r.readAsDataURL(f);
-                                                        });
-                                                        e.target.value = ""; 
-                                                    }} className="hidden" multiple accept="image/*" />
+                                                    <input 
+                                                        type="file" 
+                                                        ref={fileInputRef} 
+                                                        className="hidden" 
+                                                        multiple 
+                                                        accept="image/*" 
+                                                        onChange={async (e) => {
+                                                            const files = Array.from(e.target.files);
+                                                            if (files.length === 0) return;
+                                                            
+                                                            const readPromises = files.map(f => {
+                                                                return new Promise((resolve) => {
+                                                                    const r = new FileReader();
+                                                                    r.onloadend = () => resolve(r.result);
+                                                                    r.readAsDataURL(f);
+                                                                });
+                                                            });
+                                                            
+                                                            const newImages = await Promise.all(readPromises);
+                                                            setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+                                                            e.target.value = ""; 
+                                                        }} 
+                                                    />
                                                 </div>
                                                 
-                                                {/* 💡 移动端预览缩略图 */}
+                                                {/* 💡 移动端预览缩略图栏 */}
                                                 {form.images.length > 0 && (
                                                     <div className="space-y-1.5 text-left">
-                                                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest ml-1">排版顺序（支持横向滑动，点击两侧箭头调整）</span>
+                                                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest ml-1">排版顺序（支持横向滑动，带有极细优雅导轨）</span>
                                                         <div className="flex gap-3 overflow-x-auto py-3 px-1.5 border-y border-zinc-100 no-scrollbar">
                                                             {form.images.map((img, i) => (
                                                                 <div 
@@ -1104,160 +1124,4 @@
                                                                                 <button 
                                                                                     type="button" 
                                                                                     onClick={() => moveImageInForm(i, 'right')} 
-                                                                                    className="bg-white/95 text-zinc-900 rounded-md p-1.5 md:p-1 hover:scale-115 active:scale-90 transition-all shadow-md flex-1 flex justify-center items-center"
-                                                                                >
-                                                                                    <Icon name="chevron-right" size={12}/>
-                                                                                </button>
-                                                                            ) : <div className="flex-1" />}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="absolute bottom-1.5 left-1.5 bg-zinc-950/80 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md pointer-events-none group-hover:opacity-0 transition-opacity">
-                                                                        {i + 1}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                <button disabled={isSyncing} type="submit" className="w-full py-4 bg-zinc-950 text-white rounded-xl font-black shadow-lg text-xs uppercase tracking-widest active:scale-95 transition-all">
-                                                    {isSyncing ? "正在安全写入仓..." : editingId ? "保存并修改数据" : "确认发布空间"}
-                                                </button>
-                                                {editingId && (
-                                                    <button type="button" onClick={handleCancelEdit} className="w-full py-2 border border-zinc-200 text-zinc-400 font-bold rounded-xl text-[10px]">取消编辑</button>
-                                                )}
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 💡 主页面展示 */}
-                        <div className="mb-12 md:mb-24 text-left animate-in fade-in duration-1000">
-                            {config?.header?.headerImage && (
-                                <div className="w-full mb-8 md:mb-16 rounded-big overflow-hidden shadow-2xl max-h-[300px] md:max-h-[600px] border border-zinc-50">
-                                    <img src={config.header.headerImage} className="w-full h-full object-cover" />
-                                </div>
-                            )}
-                            <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[10rem] font-black tracking-tighter leading-[0.9] md:leading-[0.82] mb-8 md:mb-16 text-zinc-900 text-left">
-                                {config?.header?.subtitle || 'MY WORK'}<br/><span className="text-zinc-100">{config?.header?.title || 'PORTFOLIO'}</span>
-                            </h1>
-
-                            <div className="space-y-4 pt-6 pb-2 border-t border-zinc-100 max-w-3xl">
-                                <div className="flex items-center">
-                                    <span className="hidden md:flex text-[10px] font-black text-zinc-400 uppercase tracking-widest mr-4 items-center gap-1">
-                                        <Icon name="tag" size={12}/> 分类：
-                                    </span>
-                                    <div className="flex overflow-x-auto py-2 no-scrollbar gap-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap w-screen md:w-auto">
-                                        {categories.map(c => (
-                                            <button 
-                                                key={c.id} 
-                                                onClick={() => setActiveCategory(c.label)} 
-                                                className={`px-5 md:px-8 py-2 md:py-3 rounded-full border text-[10px] md:text-[11px] font-black uppercase transition-all shrink-0 ${activeCategory === c.label ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xl scale-105' : 'bg-transparent border-zinc-100 text-zinc-400 hover:border-zinc-300'}`}
-                                            >
-                                                {c.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center pt-2 border-t border-dashed border-zinc-100">
-                                    <span className="hidden md:flex text-[10px] font-black text-zinc-400 uppercase tracking-widest mr-4 items-center gap-1">
-                                        <Icon name="calendar" size={12}/> 年份：
-                                    </span>
-                                    <div className="flex overflow-x-auto py-2 no-scrollbar gap-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap w-screen md:w-auto">
-                                        {availableYears.map(year => (
-                                            <button 
-                                                key={year} 
-                                                onClick={() => setActiveYear(year)} 
-                                                className={`px-5 md:px-8 py-2 md:py-3 rounded-full border text-[10px] md:text-[11px] font-black uppercase transition-all shrink-0 ${String(activeYear) === String(year) ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xl scale-105' : 'bg-transparent border-zinc-100 text-zinc-400 hover:border-zinc-300'}`}
-                                            >
-                                                {year === '全部' ? '全部年份' : `${year} 年`}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 💡 终极瀑布流布局 */}
-                        <div className="gallery-columns space-y-4 md:space-y-8 text-left">
-                            {!isLoaded && (
-                                <div className="col-span-full py-24 text-center font-bold text-zinc-300 animate-pulse tracking-widest uppercase">
-                                    正在全速拉取极速画廊中...
-                                </div>
-                            )}
-                            {isLoaded && displayProjects.map((project) => {
-                                const currentIdx = previewIndices[project.id] || 0;
-                                const images = (project.imgs && Array.isArray(project.imgs) && project.imgs.length > 0) ? project.imgs : [project.coverImage];
-                                const displayImg = images[currentIdx];
-                                const radius = config?.borderRadius ?? 16; 
-                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 12) : radius;
-
-                                return (
-                                    <div 
-                                        key={project.id} 
-                                        style={{ borderRadius: `${adjustedRadius}px` }}
-                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
-                                    >
-                                        {accessToken && showAdminUI && (
-                                            /* 🍏 移动端触控优化：在手机端（md以下）按钮设为 opacity-100 永久可见，在桌面端保持 group-hover 隐藏/悬停显示 */
-                                            <div className="absolute top-3 md:top-8 right-3 md:right-8 flex gap-1.5 md:gap-3 z-[99] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-2 md:group-hover:translate-y-0">
-                                                <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="arrow-up-circle" size={12}/></button>
-                                                <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="edit-3" size={12}/></button>
-                                                <button title={project.isHidden ? "显示" : "隐藏"} onClick={() => toggleVisibility(project.id, project.isHidden)} className={`p-2 md:p-4 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100 ${project.isHidden ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-900'}`}>
-                                                    <Icon name={project.isHidden ? "eye-off" : "eye"} size={12}/>
-                                                </button>
-                                                <button title="永久删除" onClick={() => handleDeleteProject(project.id)} className="p-2 md:p-4 bg-red-600 text-white rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center"><Icon name="trash-2" size={12}/></button>
-                                            </div>
-                                        )}
-
-                                        <div 
-                                            style={{ borderTopLeftRadius: `${adjustedRadius}px`, borderTopRightRadius: `${adjustedRadius}px` }}
-                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-hidden bg-zinc-50"
-                                        >
-                                            <MediaRenderer 
-                                                videoUrl={project.videoUrl} 
-                                                coverImg={displayImg} 
-                                                watermarkText={config?.watermark} 
-                                                alt={project.title} 
-                                                className="w-full h-auto block select-none" 
-                                            />
-                                        </div>
-
-                                        <div className="p-3 md:p-10 text-left flex-1 flex flex-col justify-between">
-                                            <div>
-                                                <div className="flex items-start justify-between gap-1 mb-1 md:mb-4">
-                                                    <h3 className="text-xs md:text-2xl font-black leading-snug line-clamp-1" style={{ color: config?.titleColor || '#18181b' }}>{project.title}</h3>
-                                                    <span className="text-zinc-300 text-[8px] md:text-[10px] font-black shrink-0">{project.year}.{project.month}</span>
-                                                </div>
-                                                <p className="text-[9px] md:text-xs font-medium leading-relaxed line-clamp-2 text-left" style={{ color: config?.textColor || '#71717a' }}>{project.description}</p>
-                                            </div>
-
-                                            {images.length > 1 && (
-                                                <div className="flex gap-1.5 overflow-x-auto pt-3 md:pt-6 no-scrollbar">
-                                                    {images.map((img, idx) => (
-                                                        <div key={idx} onClick={()=>setPreviewIndices({...previewIndices, [project.id]: idx})} className={`w-6 h-6 md:w-12 md:h-12 rounded-md md:rounded-xl border flex-shrink-0 cursor-pointer transition-all duration-500 ${currentIdx === idx ? 'border-zinc-900 scale-105 shadow-md' : 'border-zinc-50 opacity-40 hover:opacity-100'}`}><img src={img} className="w-full h-full object-cover rounded-md md:rounded-xl" /></div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </main>
-
-                    <footer className="py-24 px-10 border-t border-zinc-50 bg-white text-zinc-300 text-[8px] md:text-[10px] font-black tracking-[0.4em] uppercase text-center">
-                        <div>&copy; 2026 PORTFOLIO.LIVE — GITHUB DATABASE ACTIVE</div>
-                    </footer>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+                                                                                    className="bg-white/
