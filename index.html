@@ -335,97 +335,6 @@
             return <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} alt={alt} className={className} />;
         };
 
-        // ========================================================
-        // 🍏 [新加] 殿堂级无滚动条长图滚动驱动器
-        // ========================================================
-        const ScrollableImageWrapper = ({ children, radius, hasVideo }) => {
-            const containerRef = useRef(null);
-            const [isHovered, setIsHovered] = useState(false);
-            const [showHint, setShowHint] = useState(false);
-            const scrollInterval = useRef(null);
-
-            useEffect(() => {
-                const checkScroll = () => {
-                    if (containerRef.current) {
-                        const { scrollHeight, clientHeight } = containerRef.current;
-                        // 当内容高度明显大于视图容器时，判定为长图并启用气泡提示
-                        setShowHint(scrollHeight > clientHeight + 15 && !hasVideo);
-                    }
-                };
-                
-                // 延迟检测以确保图片加载/Canvas处理完毕
-                const timer = setTimeout(checkScroll, 700);
-                return () => clearTimeout(timer);
-            }, [children, hasVideo]);
-
-            const handleMouseEnter = () => {
-                if (hasVideo) return; // 视频组件不开启自滚
-                setIsHovered(true);
-                if (!containerRef.current) return;
-                
-                clearInterval(scrollInterval.current);
-                const container = containerRef.current;
-                const scrollSpeed = 1.2; // 极佳的柔和自滚速度 (px / frame)
-                
-                scrollInterval.current = setInterval(() => {
-                    if (container.scrollTop < container.scrollHeight - container.clientHeight) {
-                        container.scrollTop += scrollSpeed;
-                    } else {
-                        clearInterval(scrollInterval.current);
-                    }
-                }, 16); // 保持流畅的 60fps 刷新率
-            };
-
-            const handleMouseLeave = () => {
-                if (hasVideo) return;
-                setIsHovered(false);
-                if (!containerRef.current) return;
-                
-                clearInterval(scrollInterval.current);
-                const container = containerRef.current;
-                
-                // 移开鼠标后自动快速平滑复原到顶部
-                scrollInterval.current = setInterval(() => {
-                    if (container.scrollTop > 0) {
-                        container.scrollTop -= 5; 
-                    } else {
-                        container.scrollTop = 0;
-                        clearInterval(scrollInterval.current);
-                    }
-                }, 16);
-            };
-
-            useEffect(() => {
-                return () => clearInterval(scrollInterval.current);
-            }, []);
-
-            return (
-                <div 
-                    ref={containerRef}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                    style={{ 
-                        borderTopLeftRadius: `${radius}px`, 
-                        borderTopRightRadius: `${radius}px` 
-                    }}
-                    className="relative w-full max-h-[320px] md:max-h-[600px] overflow-y-auto no-scrollbar bg-zinc-50 scroll-smooth transition-all duration-300"
-                >
-                    {children}
-                    
-                    {/* 💡 优雅的长图指示气泡：仅在长图且未悬停时显现 */}
-                    {showHint && (
-                        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full shadow-xl text-[9px] md:text-[10px] font-black uppercase text-zinc-900 border border-zinc-100 flex items-center gap-1.5 pointer-events-none transition-all duration-500 transform ${isHovered ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <polyline points="19 12 12 19 5 12"></polyline>
-                            </svg>
-                            <span>滚动浏览长图</span>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
         // 💡 极其稳健的 UTF-8 级 Base64 转码机制
         const b64EncodeUnicode = (str) => {
             const bytes = new TextEncoder().encode(str);
@@ -1303,8 +1212,11 @@
                                             </div>
                                         )}
 
-                                        {/* 🍏 这里换上了全新研发的无滚动条长图滚动驱动器组件 */}
-                                        <ScrollableImageWrapper radius={adjustedRadius} hasVideo={!!project.videoUrl}>
+                                        {/* 🍏 极简原生长图滑动：仅需使用 overflow-y-auto 配合 no-scrollbar 即可实现无损滚动 */}
+                                        <div 
+                                            style={{ borderTopLeftRadius: `${adjustedRadius}px`, borderTopRightRadius: `${adjustedRadius}px` }}
+                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-y-auto no-scrollbar bg-zinc-50"
+                                        >
                                             <MediaRenderer 
                                                 videoUrl={project.videoUrl} 
                                                 coverImg={displayImg} 
@@ -1312,7 +1224,7 @@
                                                 alt={project.title} 
                                                 className="w-full h-auto block select-none" 
                                             />
-                                        </ScrollableImageWrapper>
+                                        </div>
 
                                         <div className="p-3 md:p-10 text-left flex-1 flex flex-col justify-between">
                                             <div>
