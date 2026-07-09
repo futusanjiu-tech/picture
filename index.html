@@ -5,27 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PRO.FOLIO - 极速稳定画廊</title>
     
+    <!-- 🍏 PWA 手机 App 沉浸式全屏配置 (iOS 专属) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PRO.FOLIO">
     <link rel="apple-touch-icon" href="https://img.icons8.com/?size=512&id=118557&format=png">
     
+    <!-- 🤖 安卓 WebApp 沉浸式配置 -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
+    
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+        }
+      }
+    </script>
 
+    <!-- 加载核心工具库 (使用国内高速 CDN，彻底安全免翻墙) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://gcore.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://gcore.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://gcore.jsdelivr.net/npm/@babel/standalone@7.23.6/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
-        /* 极致无阻无缝滚动条隐藏配置 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        
         .invisible-scroll-box { 
             max-height: 85vh; 
             overflow-y: auto !important; 
@@ -40,9 +45,9 @@
         /* 经典圆角 */
         .rounded-big { border-radius: 1.5rem; }
         
-        /* 💡 手机端轻量级双列瀑布流 (参考淘宝等电商紧凑间距) */
+        /* 💡 手机端轻量级双列瀑布流 */
         .gallery-columns {
-            column-gap: 0.5rem;
+            column-gap: 1rem;
             column-count: 2;
         }
         @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
@@ -62,9 +67,9 @@
 <body class="bg-white selection:bg-zinc-900 selection:text-white text-zinc-900">
     <div id="root"></div>
 
-    <script type="text/babel">
-        // ✅ 使用全局解构替代 import
-        const { useState, useEffect, useRef } = React;
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import ReactDOM from 'react-dom/client';
 
         // ========================================================
         // 💡 离线预载本地备用演示数据 (防止新库空空如也)
@@ -103,14 +108,14 @@
             {
                 id: 'local_p2',
                 title: '3D创意海报展示',
-                description: '创意排版与视觉重构，专注于多维度光影塑造与极简排版布局，完美适配不同画幅比例。支持无滚动条顺滑长图滑动。',
+                description: '创意排版与视觉重构，专注于多维度光影塑造与极简排版布局，完美适配不同画幅比例。',
                 type: '3D作品',
                 year: 2026,
                 month: 5,
                 videoUrl: '',
-                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1500" viewBox="0 0 800 1500"><rect width="800" height="1500" fill="%2318181b"/><text x="50%25" y="20%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%233f3f46" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页首）</text><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2352525b" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页中）</text><text x="50%25" y="80%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2371717a" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页尾）</text></svg>',
+                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="%2318181b"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%233f3f46" text-anchor="middle" dominant-baseline="middle">创意设计海报 01</text></svg>',
                 imgs: [
-                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1500" viewBox="0 0 800 1500"><rect width="800" height="1500" fill="%2318181b"/><text x="50%25" y="20%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%233f3f46" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页首）</text><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2352525b" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页中）</text><text x="50%25" y="80%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2371717a" text-anchor="middle" dominant-baseline="middle">创意设计海报 01（长图页尾）</text></svg>',
+                    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="%2318181b"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%233f3f46" text-anchor="middle" dominant-baseline="middle">创意设计海报 01</text></svg>',
                     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="%2327272a"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%2352525b" text-anchor="middle" dominant-baseline="middle">创意设计海报 02</text></svg>'
                 ]
             }
@@ -218,13 +223,6 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     );
-                case 'clock':
-                    return (
-                        <svg {...svgProps}>
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                    );
                 case 'chevron-left':
                     return (
                         <svg {...svgProps}>
@@ -283,22 +281,30 @@
         };
 
         const WatermarkedDisplay = ({ src, watermarkText, alt, className }) => {
-    return (
-        <div className="relative inline-block w-full h-full select-none">
-            <img 
-                src={src} 
-                alt={alt} 
-                loading="lazy"
-                className={`${className} block w-full h-auto`} 
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                <span className="text-white/35 font-bold text-xl md:text-3xl rotate-[-15deg] whitespace-nowrap">
-                    {watermarkText || "PORTFOLIO"}
-                </span>
-            </div>
-        </div>
-    );
-};
+            const [processedSrc, setProcessedSrc] = useState('');
+            useEffect(() => {
+                if (!src) return;
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = src;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width; canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const fontSize = Math.max(24, canvas.width / 15);
+                    ctx.font = `bold ${fontSize}px sans-serif`;
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+                    ctx.fillText(watermarkText || "PORTFOLIO", canvas.width / 2, canvas.height / 2);
+                    setProcessedSrc(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.onerror = () => {
+                    setProcessedSrc(src); 
+                };
+            }, [src, watermarkText]);
+            return <img src={processedSrc || src} alt={alt} className={`${className} transition-opacity duration-700 ${!processedSrc ? 'opacity-30' : 'opacity-100'}`} />;
+        };
 
         const MediaRenderer = ({ videoUrl, coverImg, watermarkText, alt, className }) => {
             if (videoUrl && videoUrl.trim() !== '') {
@@ -309,16 +315,14 @@
                         if (match) src = match[1];
                     }
                     if (src.startsWith('//')) src = 'https:' + src;
-                    // ✅ 修复了 iframe 的 jsx 属性警告 (frameBorder, frameSpacing, allowFullScreen)
                     return (
                         <div className="aspect-video w-full rounded-t-big overflow-hidden bg-black">
-                            <iframe src={src} scrolling="no" border="0" frameBorder="0" frameSpacing="0" allowFullScreen={true} className="w-full h-full"></iframe>
+                            <iframe src={src} scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" className="w-full h-full"></iframe>
                         </div>
                     );
                 } else {
-                    // ✅ 修复了 video 的 jsx 属性警告 (autoPlay, playsInline)
                     return (
-                        <video src={videoUrl} autoPlay loop muted playsInline controls className="w-full h-auto block bg-black rounded-t-big" style={{ maxHeight: '85vh' }}></video>
+                        <video src={videoUrl} autoplay loop muted playsinline controls className="w-full h-auto block bg-black rounded-t-big" style={{ maxHeight: '85vh' }}></video>
                     );
                 }
             }
@@ -357,12 +361,10 @@
             const [isAdminMode, setIsAdminMode] = useState(false);
             const [showAdminUI, setShowAdminUI] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
-            const [isExpired, setIsExpired] = useState(false); // 💡 新增：链接过期状态
 
             // UI 状态
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
-            const [shareModal, setShareModal] = useState(false); // 💡 新增：分享时长选择模态框
 
             const [config, setConfig] = useState(LOCAL_FALLBACK_CONFIG);
             const [categories, setCategories] = useState(LOCAL_FALLBACK_CATEGORIES);
@@ -372,51 +374,26 @@
 
             const [editingId, setEditingId] = useState(null);
             const [form, setForm] = useState({ title: '', description: '', type: '全部', year: new Date().getFullYear(), month: new Date().getMonth() + 1, images: [], videoUrl: '' });
-            
-            // 💡 修复：补回丢失的三个关键状态声明，解决白屏问题
             const [previewIndices, setPreviewIndices] = useState({});
+            
             const fileInputRef = useRef(null);
             const headerFileInputRef = useRef(null);
 
-            const triggerToast = (msg, type = "info") => {
-                setToast({ show: true, message: msg, type });
-                setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3000);
+            const triggerToast = (message, type = 'info') => {
+                setToast({ show: true, message, type });
+                setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
             };
 
             const triggerConfirm = (title, onConfirm) => {
                 setConfirmModal({ show: true, title, onConfirm });
             };
 
-            const handleCopyToken = () => {
-                const t = document.createElement("textarea");
-                t.value = accessToken;
-                document.body.appendChild(t);
-                t.select();
-                document.execCommand('copy');
-                document.body.removeChild(t);
-                triggerToast("访问令牌已复制至剪贴板", "success");
-            };
-
-            // 1. 💡 全自动初始化：从路由拉取配置及校验过期时间
+            // 1. 💡 全自动初始化：从路由拉取配置
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const urlOwner = params.get('owner');
                 const urlRepo = params.get('repo');
                 const urlBranch = params.get('branch') || 'main';
-                const urlExpire = params.get('expire'); // 💡 读取过期参数
-
-                // 💡 校验过期时间
-                if (urlExpire) {
-                    const expireTime = parseInt(urlExpire, 10);
-                    if (Date.now() > expireTime) {
-                        setIsExpired(true);
-                        // 如果有缓存的 Token（代表是号主），我们可以读取以渲染“返回后台”按钮
-                        if (localStorage.getItem('gh_portfolio_token')) {
-                            setAccessToken(localStorage.getItem('gh_portfolio_token'));
-                        }
-                        return; // 终止后续加载拉取操作，保护数据
-                    }
-                }
 
                 const cachedOwner = localStorage.getItem('gh_portfolio_owner');
                 const cachedRepo = localStorage.getItem('gh_portfolio_repo');
@@ -428,22 +405,18 @@
                     setShowAdminUI(true); 
                 }
 
-                let finalOwner = urlOwner;
-                let finalRepo = urlRepo;
-
                 if (!urlOwner && !urlRepo && cachedOwner && cachedRepo) {
-                    // 💡 修复：在 iframe 沙盒中直接操作 window.location 会抛出错误，改为使用状态进行内部导航
-                    finalOwner = cachedOwner;
-                    finalRepo = cachedRepo;
+                    window.location.href = `${window.location.origin}${window.location.pathname}?owner=${cachedOwner}&repo=${cachedRepo}&branch=${urlBranch}`;
+                    return;
                 }
 
-                if (finalOwner && finalRepo) {
-                    setOwner(finalOwner);
-                    setRepo(finalRepo);
+                if (urlOwner && urlRepo) {
+                    setOwner(urlOwner);
+                    setRepo(urlRepo);
                     setBranch(urlBranch);
-                    localStorage.setItem('gh_portfolio_owner', finalOwner);
-                    localStorage.setItem('gh_portfolio_repo', finalRepo);
-                    loadDataFromGitHub(finalOwner, finalRepo, urlBranch, cachedToken);
+                    localStorage.setItem('gh_portfolio_owner', urlOwner);
+                    localStorage.setItem('gh_portfolio_repo', urlRepo);
+                    loadDataFromGitHub(urlOwner, urlRepo, urlBranch, cachedToken);
                 } else {
                     setIsLoaded(true);
                 }
@@ -453,6 +426,7 @@
             const fetchShaOnly = async (own, rep, br, tok) => {
                 try {
                     const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
+                    // 仅使用极简的随机数破除缓存，不再使用引发跨域失败的 Cache-Control 和 Pragma 头
                     const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}_${Math.random()}`;
                     const res = await fetch(apiUrl, { headers });
                     if (res.ok) {
@@ -473,12 +447,14 @@
                 const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${cacheBuster}`;
                 const rawUrl = `https://raw.githubusercontent.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
                 
+                // 💡 【极简且不被拦截的安全头】
                 const tokenHeaders = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
 
                 if (useApiFirst) {
                     try {
                         const res = await fetch(apiUrl, { headers: tokenHeaders });
                         
+                        // 强制校验响应状态
                         if (!res.ok) {
                             if (res.status === 404) {
                                 setProjects(LOCAL_FALLBACK_PROJECTS);
@@ -524,56 +500,48 @@
                             return;
                         } catch(rawErr) {
                             console.error("所有通道均失败", rawErr);
-                            triggerToast(`获取数据失败，请确认网络代理或 Token 权限是否正常分配。`, "error");
+                            triggerToast(`获取数据失败，请确认梯子是否开启或 Token 权限是否正常分配。`, "error");
                         }
                     }
                 }
 
                 // ==========================================
-                // 普通游客访客通道（国内免代理极速）- 优化为 CDN 并发竞速模式
+                // 以下为【普通游客访客通道】（国内免梯极速）
                 // ==========================================
-                
-                // 封装带有超时的 fetch，防止某个节点一直挂起
-                const fetchWithTimeout = (url, timeout = 5000) => {
-                    return Promise.race([
-                        fetch(url).then(res => {
-                            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-                            return res;
-                        }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-                    ]);
-                };
+                try {
+                    const res = await fetch(cdnUrl);
+                    if (res.ok) {
+                        const data = await res.json();
+                        applyLoadedData(data);
+                        fetchShaOnly(own, rep, br, tok);
+                        setIsLoaded(true);
+                        return;
+                    }
+                } catch(e) {}
 
                 try {
-                    // 让所有 CDN 节点并发请求，谁最先成功返回，就用谁的数据
-                    const fastestRes = await Promise.any([
-                        fetchWithTimeout(cdnUrl),
-                        fetchWithTimeout(jsdelivrUrl),
-                        fetchWithTimeout(rawUrl)
-                    ]);
-                    
-                    const data = await fastestRes.json();
-                    applyLoadedData(data);
-                    fetchShaOnly(own, rep, br, tok);
-                    setIsLoaded(true);
-                    return;
-                } catch (e) {
-                    console.warn("CDN 加速节点均失败或超时，尝试 API 兜底...", e);
-                    
-                    // 所有 CDN 都失败了，最后尝试 API
-                    try {
-                        const res = await fetch(apiUrl, { headers: tokenHeaders });
-                        if (res.ok) {
-                            const apiData = await res.json();
-                            if (apiData.sha) setFileSha(apiData.sha);
-                            const decodedStr = b64DecodeUnicode(apiData.content.replace(/\s/g, ''));
-                            applyLoadedData(JSON.parse(decodedStr));
-                            setIsLoaded(true);
-                            return;
-                        }
-                    } catch(apiErr) {
-                        triggerToast("网络连接极差，目前处于本地离线模式", "info");
+                    const res = await fetch(jsdelivrUrl);
+                    if (res.ok) {
+                        const data = await res.json();
+                        applyLoadedData(data);
+                        fetchShaOnly(own, rep, br, tok);
+                        setIsLoaded(true);
+                        return;
                     }
+                } catch(e) {}
+
+                try {
+                    const res = await fetch(apiUrl, { headers: tokenHeaders });
+                    if (res.ok) {
+                        const apiData = await res.json();
+                        if (apiData.sha) setFileSha(apiData.sha);
+                        const decodedStr = b64DecodeUnicode(apiData.content.replace(/\s/g, ''));
+                        applyLoadedData(JSON.parse(decodedStr));
+                        setIsLoaded(true);
+                        return;
+                    }
+                } catch(e) {
+                    triggerToast("目前处于本地离线模式", "info");
                 } finally {
                     setIsLoaded(true);
                 }
@@ -601,6 +569,7 @@
 
                     const base64Content = b64EncodeUnicode(JSON.stringify(commitData));
                     
+                    // 1. 获取最新锁：完全抛弃导致 Failed to fetch 的 CORS 危险头！
                     let sha = fileSha || localStorage.getItem('github_file_sha') || '';
                     const getShaUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}&t=${Date.now()}`;
                     
@@ -619,6 +588,7 @@
                         console.warn("获取 SHA 失败，尝试继续写入...");
                     }
 
+                    // 2. 写入数据
                     const saveUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
                     const payload = {
                         content: base64Content,
@@ -646,7 +616,7 @@
                         if (res.status === 401) {
                             throw new Error("Token 密钥不正确");
                         } else if (res.status === 403) {
-                            throw new Error("权限不足，请确认已勾选 Read and write 权限");
+                            throw new Error("权限不足，请确认已勾选 Read and write");
                         } else if (res.status === 409) {
                             throw new Error("操作冲突，请刷新页面后再试！");
                         } else {
@@ -678,7 +648,7 @@
                 });
                 
                 let result = await perform(base64Str, maxWidth, quality);
-                // 压缩到 200KB 以内防止引发大体积传输故障
+                // 防爆保护，无限死循环迭代直到小于 200KB 为止，100% 不崩！
                 while (result.length > 200000 && maxWidth > 400) {
                     maxWidth = Math.floor(maxWidth * 0.85);
                     quality = Math.max(0.4, quality - 0.1);
@@ -702,12 +672,8 @@
                     setIsAdminMode(true);
                 }
 
-                // 💡 修复：改为状态驱动，避免页面刷新导致 URL 解析错误
-                setOwner(gOwner);
-                setRepo(gRepo);
-                setBranch(gBranch);
-                setIsLoaded(false);
-                loadDataFromGitHub(gOwner, gRepo, gBranch, gToken || accessToken);
+                const url = `${window.location.origin}${window.location.pathname}?owner=${gOwner}&repo=${gRepo}&branch=${gBranch}`;
+                window.location.href = url;
             };
 
             const handleUpload = async (e) => {
@@ -744,8 +710,10 @@
                         newProjectsList = [newProj, ...projects];
                     }
 
+                    // 同步到云端
                     await saveDataToGitHub(config, categories, newProjectsList);
                     
+                    // 彻底破除白屏：只有当云端没有抛出异常，才会执行界面的渲染刷新！
                     setProjects(newProjectsList);
                     triggerToast("发布成功！作品已无缝锁入云端", "success");
 
@@ -853,23 +821,14 @@
                 setForm(prev => ({ ...prev, images: newImages }));
             };
 
-            // 💡 新增：生成不同有效期的分享链接
-            const handleCopyShareLink = (days) => {
-                let link = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`;
-                if (days > 0) {
-                    // 计算未来过期的时间戳 (毫秒)
-                    const expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
-                    link += `&expire=${expireTime}`;
-                }
+            const handleCopyToken = () => {
                 const t = document.createElement("textarea");
-                t.value = link;
+                t.value = accessToken;
                 document.body.appendChild(t);
                 t.select();
                 document.execCommand('copy');
                 document.body.removeChild(t);
-                
-                triggerToast(days > 0 ? `限时 ${days} 天链接已复制！客户过期将无法访问` : '永久链接已复制！', 'success');
-                setShareModal(false);
+                triggerToast('安全令牌已成功复制，请妥善保存到备忘录中！', 'success');
             };
 
             const displayProjects = projects
@@ -885,7 +844,7 @@
 
             const availableYears = ['全部', ...new Set(projects.map(p => p.year).filter(Boolean))].sort((a,b) => b - a);
 
-            // 💡 数据库未配置引导页面
+            // 💡 新引导流程：手把手带用户配置 GitHub 极速数据库
             if (!owner || !repo) {
                 return (
                     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8">
@@ -898,11 +857,11 @@
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 1：GitHub 用户名 (Owner)</label>
-                                        <input required name="gOwner" placeholder="例如：yourname" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input required name="gOwner" placeholder="例如：yourname (个人空间地址的名字)" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 2：公开仓库名称 (Repo)</label>
-                                        <input required name="gRepo" placeholder="例如：picture" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input required name="gRepo" placeholder="例如：picture (注意需要是 Public 公开可见)" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 3：默认分支 (Branch)</label>
@@ -919,36 +878,8 @@
                             
                             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs">
                                 <span className="font-bold text-slate-300">© 2026 PRO.FOLIO CDNSPEED</span>
-                                <button type="button" onClick={() => { 
-                                    setOwner('futusanjiu-8462'); 
-                                    setRepo('demo-portfolio'); 
-                                    setBranch('main'); 
-                                    setIsLoaded(false);
-                                    loadDataFromGitHub('futusanjiu-8462', 'demo-portfolio', 'main', accessToken);
-                                }} className="text-xs font-black text-red-500 hover:underline flex items-center gap-1">点击加载 Demo 体验 <Icon name="arrow-right" size={12} /></button>
+                                <button onClick={() => { window.location.href = '?owner=futusanjiu-8462&repo=demo-portfolio&branch=main'; }} className="text-xs font-black text-red-500 hover:underline flex items-center gap-1">点击加载 Demo 体验 <Icon name="arrow-right" size={12} /></button>
                             </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 💡 新增：高颜值的链接失效拦截页面
-            if (isExpired) {
-                return (
-                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-700">
-                        <div className="w-full max-w-md bg-white rounded-3xl p-10 md:p-12 shadow-xl border border-slate-100 text-center">
-                            <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-8 text-zinc-400 border-4 border-white shadow-md">
-                                <Icon name="clock" size={32} />
-                            </div>
-                            <h2 className="text-2xl font-black mb-3">链接已过期</h2>
-                            <p className="text-xs font-bold text-slate-400 mb-10 leading-relaxed">
-                                该空间分享链接已超过设定的访问时效，<br/>为了保护创作者权益，内容现已自动隐藏。<br/>如果您仍需浏览，请联系空间所有者获取最新链接。
-                            </p>
-                            {accessToken && (
-                                <button onClick={() => setIsExpired(false)} className="w-full py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg transition-all">
-                                    返回我的管理后台
-                                </button>
-                            )}
                         </div>
                     </div>
                 );
@@ -984,40 +915,8 @@
                         </div>
                     )}
 
-                    {/* 💡 新增：分享时长选择模态框 */}
-                    {shareModal && (
-                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
-                            <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
-                                <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-900">
-                                    <Icon name="share-2" size={20} />
-                                </div>
-                                <h3 className="text-lg font-black mb-1 text-zinc-900">分享空间地址</h3>
-                                <p className="text-[10px] font-bold text-zinc-400 mb-6 uppercase">请选择链接的有效时长</p>
-                                
-                                <div className="space-y-3 mb-6">
-                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center">
-                                        <span>永久有效</span> <span className="text-[10px] text-zinc-400 font-bold">无限制</span>
-                                    </button>
-                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center">
-                                        <span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期项目提案</span>
-                                    </button>
-                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center">
-                                        <span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">阅后即焚级防护</span>
-                                    </button>
-                                </div>
-                                
-                                <button onClick={() => setShareModal(false)} className="py-3 px-6 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
-                            </div>
-                        </div>
-                    )}
-
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 md:px-10 h-16 md:h-20 flex items-center justify-between">
-                        <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => {
-                            setOwner('');
-                            setRepo('');
-                            localStorage.removeItem('gh_portfolio_owner');
-                            localStorage.removeItem('gh_portfolio_repo');
-                        }}>PORTFOLIO.LIVE</div>
+                        <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => window.location.href='/'}>PORTFOLIO.LIVE</div>
                         <div className="flex gap-2">
                             {accessToken ? (
                                 <button onClick={() => setShowAdminUI(!showAdminUI)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-600'}`}>{showAdminUI ? '画廊预览' : '内容发布'}</button>
@@ -1026,27 +925,17 @@
                                     const tok = prompt("请输入您的 GitHub 个人令牌 (Token) 以开通极速跨域写入权限：");
                                     if (tok) {
                                         localStorage.setItem('gh_portfolio_token', tok);
-                                        setAccessToken(tok);
-                                        setIsAdminMode(true);
+                                        window.location.reload();
                                     }
                                 }} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-black uppercase tracking-wider">设置令牌</button>
                             )}
                             {isAdminMode && (
-                                <button onClick={() => { 
-                                    localStorage.removeItem('gh_portfolio_token'); 
-                                    localStorage.removeItem('gh_portfolio_owner'); 
-                                    localStorage.removeItem('gh_portfolio_repo'); 
-                                    setAccessToken('');
-                                    setIsAdminMode(false);
-                                    setShowAdminUI(false);
-                                    setOwner('');
-                                    setRepo('');
-                                }} className="text-zinc-300 hover:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
+                                <button onClick={() => { localStorage.removeItem('gh_portfolio_token'); localStorage.removeItem('gh_portfolio_owner'); localStorage.removeItem('gh_portfolio_repo'); window.location.reload(); }} className="text-zinc-300 hover:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
                             )}
                         </div>
                     </nav>
 
-                    <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-2 md:px-10 max-w-gallery">
+                    <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-4 md:px-10 max-w-gallery">
                         {/* 💡 管理后台功能板块 */}
                         {accessToken && showAdminUI && (
                             <div className="space-y-6 mb-24 animate-in slide-in-from-top-6 duration-700 text-left">
@@ -1055,7 +944,7 @@
                                         <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 极速工作台</h3>
                                         <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">通过 GitHub 官方 CORS 通道直连。已移除所有不兼容防缓存属性，100% 防止浏览器请求拦截！</p>
                                     </div>
-                                    <button onClick={() => setShareModal(true)} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"><Icon name="share-2" size={14}/> 分享空间地址</button>
+                                    <button onClick={() => { const t = document.createElement("textarea"); t.value = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); triggerToast('您的专属分享链接已复制！去发给客户看看吧。', 'success'); }} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl"><Icon name="share-2" size={14}/> 复制空间地址</button>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
@@ -1090,7 +979,7 @@
                                             <button type="button" onClick={() => saveDataToGitHub(config, categories, projects)} className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs rounded-xl uppercase shadow-md transition-colors">手动保存当前定制</button>
                                         </div>
 
-                                        {/* 💡 分类系统管理功能 */}
+                                        {/* 💡 分类系统管理功能，直接一键同步 */}
                                         <div className="pt-4 border-t border-zinc-200">
                                             <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-3 flex items-center gap-1"><Icon name="layers" size={12}/> 分类管理中心</h4>
                                             <div className="flex flex-wrap gap-1.5 mb-4">
@@ -1162,7 +1051,7 @@
                                                 {/* 💡 触控区域 */}
                                                 <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-zinc-200 rounded-big p-6 flex flex-col items-center justify-center cursor-pointer bg-white hover:border-zinc-400 h-[120px] shadow-sm group text-center active:bg-zinc-50">
                                                     <Icon name="upload" size={28} className="text-zinc-300 mb-2 group-hover:scale-110 transition-transform"/>
-                                                    <span className="text-[10px] font-black text-zinc-500">点击上传作品图</span>
+                                                    <span className="text-[10px] font-black text-zinc-500">点击上传作品长图</span>
                                                     <span className="text-[8px] font-bold text-zinc-400 mt-1">（手机相册中长按图片，即可激活“多选”批量导入）</span>
                                                     
                                                     <input type="file" ref={fileInputRef} onChange={(e)=>{
@@ -1304,17 +1193,16 @@
                                 const images = (project.imgs && Array.isArray(project.imgs) && project.imgs.length > 0) ? project.imgs : [project.coverImage];
                                 const displayImg = images[currentIdx];
                                 const radius = config?.borderRadius ?? 16; 
-                                /* 手机端圆角压低，配合紧凑布局 */
-                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 8) : radius;
+                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 12) : radius;
 
                                 return (
                                     <div 
                                         key={project.id} 
                                         style={{ borderRadius: `${adjustedRadius}px` }}
-                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-2 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
+                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
                                     >
                                         {accessToken && showAdminUI && (
-                                            /* 🍏 移动端触控优化 */
+                                            /* 🍏 移动端触控优化：在手机端（md以下）按钮设为 opacity-100 永久可见，在桌面端保持 group-hover 隐藏/悬停显示 */
                                             <div className="absolute top-3 md:top-8 right-3 md:right-8 flex gap-1.5 md:gap-3 z-[99] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-2 md:group-hover:translate-y-0">
                                                 <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="arrow-up-circle" size={12}/></button>
                                                 <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="edit-3" size={12}/></button>
@@ -1325,10 +1213,9 @@
                                             </div>
                                         )}
 
-                                        {/* 🍏 极简原生长图滑动：仅需使用 overflow-y-auto 配合 no-scrollbar 即可实现无损滚动 */}
                                         <div 
                                             style={{ borderTopLeftRadius: `${adjustedRadius}px`, borderTopRightRadius: `${adjustedRadius}px` }}
-                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-y-auto no-scrollbar bg-zinc-50"
+                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-hidden bg-zinc-50"
                                         >
                                             <MediaRenderer 
                                                 videoUrl={project.videoUrl} 
@@ -1339,7 +1226,7 @@
                                             />
                                         </div>
 
-                                        <div className="p-2 md:p-10 text-left flex-1 flex flex-col justify-between">
+                                        <div className="p-3 md:p-10 text-left flex-1 flex flex-col justify-between">
                                             <div>
                                                 <div className="flex items-start justify-between gap-1 mb-1 md:mb-4">
                                                     <h3 className="text-xs md:text-2xl font-black leading-snug line-clamp-1" style={{ color: config?.titleColor || '#18181b' }}>{project.title}</h3>
