@@ -229,6 +229,13 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     );
+                case 'clock':
+                    return (
+                        <svg {...svgProps}>
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    );
                 case 'chevron-left':
                     return (
                         <svg {...svgProps}>
@@ -367,10 +374,12 @@
             const [isAdminMode, setIsAdminMode] = useState(false);
             const [showAdminUI, setShowAdminUI] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
+            const [isExpired, setIsExpired] = useState(false); // 💡 新增：链接过期状态
 
             // UI 状态
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
+            const [shareModal, setShareModal] = useState(false); // 💡 新增：分享时长选择模态框
 
             const [config, setConfig] = useState(LOCAL_FALLBACK_CONFIG);
             const [categories, setCategories] = useState(LOCAL_FALLBACK_CATEGORIES);
@@ -380,26 +389,26 @@
 
             const [editingId, setEditingId] = useState(null);
             const [form, setForm] = useState({ title: '', description: '', type: '全部', year: new Date().getFullYear(), month: new Date().getMonth() + 1, images: [], videoUrl: '' });
-            const [previewIndices, setPreviewIndices] = useState({});
-            
-            const fileInputRef = useRef(null);
-            const headerFileInputRef = useRef(null);
-
-            const triggerToast = (message, type = 'info') => {
-                setToast({ show: true, message, type });
-                setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
-            };
-
-            const triggerConfirm = (title, onConfirm) => {
-                setConfirmModal({ show: true, title, onConfirm });
-            };
-
-            // 1. 💡 全自动初始化：从路由拉取配置
+            // 1. 💡 全自动初始化：从路由拉取配置及校验过期时间
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const urlOwner = params.get('owner');
                 const urlRepo = params.get('repo');
                 const urlBranch = params.get('branch') || 'main';
+                const urlExpire = params.get('expire'); // 💡 读取过期参数
+
+                // 💡 校验过期时间
+                if (urlExpire) {
+                    const expireTime = parseInt(urlExpire, 10);
+                    if (Date.now() > expireTime) {
+                        setIsExpired(true);
+                        // 如果有缓存的 Token（代表是号主），我们可以读取以渲染“返回后台”按钮
+                        if (localStorage.getItem('gh_portfolio_token')) {
+                            setAccessToken(localStorage.getItem('gh_portfolio_token'));
+                        }
+                        return; // 终止后续加载拉取操作，保护数据
+                    }
+                }
 
                 const cachedOwner = localStorage.getItem('gh_portfolio_owner');
                 const cachedRepo = localStorage.getItem('gh_portfolio_repo');
@@ -820,14 +829,23 @@
                 setForm(prev => ({ ...prev, images: newImages }));
             };
 
-            const handleCopyToken = () => {
+            // 💡 新增：生成不同有效期的分享链接
+            const handleCopyShareLink = (days) => {
+                let link = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`;
+                if (days > 0) {
+                    // 计算未来过期的时间戳 (毫秒)
+                    const expireTime = Date.now() + days * 24 * 60 * 60 * 1000;
+                    link += `&expire=${expireTime}`;
+                }
                 const t = document.createElement("textarea");
-                t.value = accessToken;
+                t.value = link;
                 document.body.appendChild(t);
                 t.select();
                 document.execCommand('copy');
                 document.body.removeChild(t);
-                triggerToast('安全令牌已成功复制，请妥善保存到备忘录中！', 'success');
+                
+                triggerToast(days > 0 ? `限时 ${days} 天链接已复制！客户过期将无法访问` : '永久链接已复制！', 'success');
+                setShareModal(false);
             };
 
             const displayProjects = projects
@@ -884,6 +902,28 @@
                 );
             }
 
+            // 💡 新增：高颜值的链接失效拦截页面
+            if (isExpired) {
+                return (
+                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-700">
+                        <div className="w-full max-w-md bg-white rounded-3xl p-10 md:p-12 shadow-xl border border-slate-100 text-center">
+                            <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-8 text-zinc-400 border-4 border-white shadow-md">
+                                <Icon name="clock" size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black mb-3">链接已过期</h2>
+                            <p className="text-xs font-bold text-slate-400 mb-10 leading-relaxed">
+                                该空间分享链接已超过设定的访问时效，<br/>为了保护创作者权益，内容现已自动隐藏。<br/>如果您仍需浏览，请联系空间所有者获取最新链接。
+                            </p>
+                            {accessToken && (
+                                <button onClick={() => window.location.href = window.location.pathname} className="w-full py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg transition-all">
+                                    返回我的管理后台
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="min-h-screen bg-white text-zinc-900">
                     {/* 💡 全屏高阻断优雅同步加载遮罩 */}
@@ -910,6 +950,33 @@
                                     <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500">取消</button>
                                     <button onClick={() => { confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-full text-xs font-black">确认</button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 💡 新增：分享时长选择模态框 */}
+                    {shareModal && (
+                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
+                            <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
+                                <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-900">
+                                    <Icon name="share-2" size={20} />
+                                </div>
+                                <h3 className="text-lg font-black mb-1 text-zinc-900">分享空间地址</h3>
+                                <p className="text-[10px] font-bold text-zinc-400 mb-6 uppercase">请选择链接的有效时长</p>
+                                
+                                <div className="space-y-3 mb-6">
+                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center">
+                                        <span>永久有效</span> <span className="text-[10px] text-zinc-400 font-bold">无限制</span>
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center">
+                                        <span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期项目提案</span>
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center">
+                                        <span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">阅后即焚级防护</span>
+                                    </button>
+                                </div>
+                                
+                                <button onClick={() => setShareModal(false)} className="py-3 px-6 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
                             </div>
                         </div>
                     )}
@@ -943,7 +1010,7 @@
                                         <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 极速工作台</h3>
                                         <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">通过 GitHub 官方 CORS 通道直连。已移除所有不兼容防缓存属性，100% 防止浏览器请求拦截！</p>
                                     </div>
-                                    <button onClick={() => { const t = document.createElement("textarea"); t.value = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); triggerToast('您的专属分享链接已复制！去发给客户看看吧。', 'success'); }} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl"><Icon name="share-2" size={14}/> 复制空间地址</button>
+                                    <button onClick={() => setShareModal(true)} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"><Icon name="share-2" size={14}/> 分享空间地址</button>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
