@@ -51,9 +51,9 @@
         /* 经典圆角 */
         .rounded-big { border-radius: 1.5rem; }
         
-        /* 💡 手机端轻量级双列瀑布流 */
+        /* 💡 手机端轻量级双列瀑布流 (参考淘宝等电商紧凑间距) */
         .gallery-columns {
-            column-gap: 1rem;
+            column-gap: 0.5rem;
             column-count: 2;
         }
         @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
@@ -934,7 +934,7 @@
                         </div>
                     </nav>
 
-                    <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-4 md:px-10 max-w-gallery">
+                    <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-2 md:px-10 max-w-gallery">
                         {/* 💡 管理后台功能板块 */}
                         {accessToken && showAdminUI && (
                             <div className="space-y-6 mb-24 animate-in slide-in-from-top-6 duration-700 text-left">
@@ -1192,13 +1192,14 @@
                                 const images = (project.imgs && Array.isArray(project.imgs) && project.imgs.length > 0) ? project.imgs : [project.coverImage];
                                 const displayImg = images[currentIdx];
                                 const radius = config?.borderRadius ?? 16; 
-                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 12) : radius;
+                                /* 手机端圆角压低，配合紧凑布局 */
+                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 8) : radius;
 
                                 return (
                                     <div 
                                         key={project.id} 
                                         style={{ borderRadius: `${adjustedRadius}px` }}
-                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
+                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-2 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
                                     >
                                         {accessToken && showAdminUI && (
                                             /* 🍏 移动端触控优化 */
@@ -1226,7 +1227,7 @@
                                             />
                                         </div>
 
-                                        <div className="p-3 md:p-10 text-left flex-1 flex flex-col justify-between">
+                                        <div className="p-2 md:p-10 text-left flex-1 flex flex-col justify-between">
                                             <div>
                                                 <div className="flex items-start justify-between gap-1 mb-1 md:mb-4">
                                                     <h3 className="text-xs md:text-2xl font-black leading-snug line-clamp-1" style={{ color: config?.titleColor || '#18181b' }}>{project.title}</h3>
