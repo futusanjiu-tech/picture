@@ -428,18 +428,22 @@
                     setShowAdminUI(true); 
                 }
 
+                let finalOwner = urlOwner;
+                let finalRepo = urlRepo;
+
                 if (!urlOwner && !urlRepo && cachedOwner && cachedRepo) {
-                    window.location.href = `${window.location.origin}${window.location.pathname}?owner=${cachedOwner}&repo=${cachedRepo}&branch=${urlBranch}`;
-                    return;
+                    // 💡 修复：在 iframe 沙盒中直接操作 window.location 会抛出错误，改为使用状态进行内部导航
+                    finalOwner = cachedOwner;
+                    finalRepo = cachedRepo;
                 }
 
-                if (urlOwner && urlRepo) {
-                    setOwner(urlOwner);
-                    setRepo(urlRepo);
+                if (finalOwner && finalRepo) {
+                    setOwner(finalOwner);
+                    setRepo(finalRepo);
                     setBranch(urlBranch);
-                    localStorage.setItem('gh_portfolio_owner', urlOwner);
-                    localStorage.setItem('gh_portfolio_repo', urlRepo);
-                    loadDataFromGitHub(urlOwner, urlRepo, urlBranch, cachedToken);
+                    localStorage.setItem('gh_portfolio_owner', finalOwner);
+                    localStorage.setItem('gh_portfolio_repo', finalRepo);
+                    loadDataFromGitHub(finalOwner, finalRepo, urlBranch, cachedToken);
                 } else {
                     setIsLoaded(true);
                 }
@@ -526,42 +530,50 @@
                 }
 
                 // ==========================================
-                // 普通游客访客通道（国内免代理极速）
+                // 普通游客访客通道（国内免代理极速）- 优化为 CDN 并发竞速模式
                 // ==========================================
-                try {
-                    const res = await fetch(cdnUrl);
-                    if (res.ok) {
-                        const data = await res.json();
-                        applyLoadedData(data);
-                        fetchShaOnly(own, rep, br, tok);
-                        setIsLoaded(true);
-                        return;
-                    }
-                } catch(e) {}
+                
+                // 封装带有超时的 fetch，防止某个节点一直挂起
+                const fetchWithTimeout = (url, timeout = 5000) => {
+                    return Promise.race([
+                        fetch(url).then(res => {
+                            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                            return res;
+                        }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+                    ]);
+                };
 
                 try {
-                    const res = await fetch(jsdelivrUrl);
-                    if (res.ok) {
-                        const data = await res.json();
-                        applyLoadedData(data);
-                        fetchShaOnly(own, rep, br, tok);
-                        setIsLoaded(true);
-                        return;
+                    // 让所有 CDN 节点并发请求，谁最先成功返回，就用谁的数据
+                    const fastestRes = await Promise.any([
+                        fetchWithTimeout(cdnUrl),
+                        fetchWithTimeout(jsdelivrUrl),
+                        fetchWithTimeout(rawUrl)
+                    ]);
+                    
+                    const data = await fastestRes.json();
+                    applyLoadedData(data);
+                    fetchShaOnly(own, rep, br, tok);
+                    setIsLoaded(true);
+                    return;
+                } catch (e) {
+                    console.warn("CDN 加速节点均失败或超时，尝试 API 兜底...", e);
+                    
+                    // 所有 CDN 都失败了，最后尝试 API
+                    try {
+                        const res = await fetch(apiUrl, { headers: tokenHeaders });
+                        if (res.ok) {
+                            const apiData = await res.json();
+                            if (apiData.sha) setFileSha(apiData.sha);
+                            const decodedStr = b64DecodeUnicode(apiData.content.replace(/\s/g, ''));
+                            applyLoadedData(JSON.parse(decodedStr));
+                            setIsLoaded(true);
+                            return;
+                        }
+                    } catch(apiErr) {
+                        triggerToast("网络连接极差，目前处于本地离线模式", "info");
                     }
-                } catch(e) {}
-
-                try {
-                    const res = await fetch(apiUrl, { headers: tokenHeaders });
-                    if (res.ok) {
-                        const apiData = await res.json();
-                        if (apiData.sha) setFileSha(apiData.sha);
-                        const decodedStr = b64DecodeUnicode(apiData.content.replace(/\s/g, ''));
-                        applyLoadedData(JSON.parse(decodedStr));
-                        setIsLoaded(true);
-                        return;
-                    }
-                } catch(e) {
-                    triggerToast("目前处于本地离线模式", "info");
                 } finally {
                     setIsLoaded(true);
                 }
@@ -690,8 +702,12 @@
                     setIsAdminMode(true);
                 }
 
-                const url = `${window.location.origin}${window.location.pathname}?owner=${gOwner}&repo=${gRepo}&branch=${gBranch}`;
-                window.location.href = url;
+                // 💡 修复：改为状态驱动，避免页面刷新导致 URL 解析错误
+                setOwner(gOwner);
+                setRepo(gRepo);
+                setBranch(gBranch);
+                setIsLoaded(false);
+                loadDataFromGitHub(gOwner, gRepo, gBranch, gToken || accessToken);
             };
 
             const handleUpload = async (e) => {
@@ -903,7 +919,13 @@
                             
                             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs">
                                 <span className="font-bold text-slate-300">© 2026 PRO.FOLIO CDNSPEED</span>
-                                <button onClick={() => { window.location.href = '?owner=futusanjiu-8462&repo=demo-portfolio&branch=main'; }} className="text-xs font-black text-red-500 hover:underline flex items-center gap-1">点击加载 Demo 体验 <Icon name="arrow-right" size={12} /></button>
+                                <button type="button" onClick={() => { 
+                                    setOwner('futusanjiu-8462'); 
+                                    setRepo('demo-portfolio'); 
+                                    setBranch('main'); 
+                                    setIsLoaded(false);
+                                    loadDataFromGitHub('futusanjiu-8462', 'demo-portfolio', 'main', accessToken);
+                                }} className="text-xs font-black text-red-500 hover:underline flex items-center gap-1">点击加载 Demo 体验 <Icon name="arrow-right" size={12} /></button>
                             </div>
                         </div>
                     </div>
@@ -923,7 +945,7 @@
                                 该空间分享链接已超过设定的访问时效，<br/>为了保护创作者权益，内容现已自动隐藏。<br/>如果您仍需浏览，请联系空间所有者获取最新链接。
                             </p>
                             {accessToken && (
-                                <button onClick={() => window.location.href = window.location.pathname} className="w-full py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg transition-all">
+                                <button onClick={() => setIsExpired(false)} className="w-full py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg transition-all">
                                     返回我的管理后台
                                 </button>
                             )}
@@ -990,7 +1012,12 @@
                     )}
 
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 md:px-10 h-16 md:h-20 flex items-center justify-between">
-                        <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => window.location.href='/'}>PORTFOLIO.LIVE</div>
+                        <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => {
+                            setOwner('');
+                            setRepo('');
+                            localStorage.removeItem('gh_portfolio_owner');
+                            localStorage.removeItem('gh_portfolio_repo');
+                        }}>PORTFOLIO.LIVE</div>
                         <div className="flex gap-2">
                             {accessToken ? (
                                 <button onClick={() => setShowAdminUI(!showAdminUI)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-600'}`}>{showAdminUI ? '画廊预览' : '内容发布'}</button>
@@ -999,12 +1026,22 @@
                                     const tok = prompt("请输入您的 GitHub 个人令牌 (Token) 以开通极速跨域写入权限：");
                                     if (tok) {
                                         localStorage.setItem('gh_portfolio_token', tok);
-                                        window.location.reload();
+                                        setAccessToken(tok);
+                                        setIsAdminMode(true);
                                     }
                                 }} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-black uppercase tracking-wider">设置令牌</button>
                             )}
                             {isAdminMode && (
-                                <button onClick={() => { localStorage.removeItem('gh_portfolio_token'); localStorage.removeItem('gh_portfolio_owner'); localStorage.removeItem('gh_portfolio_repo'); window.location.reload(); }} className="text-zinc-300 hover:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
+                                <button onClick={() => { 
+                                    localStorage.removeItem('gh_portfolio_token'); 
+                                    localStorage.removeItem('gh_portfolio_owner'); 
+                                    localStorage.removeItem('gh_portfolio_repo'); 
+                                    setAccessToken('');
+                                    setIsAdminMode(false);
+                                    setShowAdminUI(false);
+                                    setOwner('');
+                                    setRepo('');
+                                }} className="text-zinc-300 hover:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
                             )}
                         </div>
                     </nav>
