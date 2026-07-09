@@ -283,30 +283,22 @@
         };
 
         const WatermarkedDisplay = ({ src, watermarkText, alt, className }) => {
-            const [processedSrc, setProcessedSrc] = useState('');
-            useEffect(() => {
-                if (!src) return;
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.src = src;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width; canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const fontSize = Math.max(24, canvas.width / 15);
-                    ctx.font = `bold ${fontSize}px sans-serif`;
-                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
-                    ctx.fillText(watermarkText || "PORTFOLIO", canvas.width / 2, canvas.height / 2);
-                    setProcessedSrc(canvas.toDataURL('image/jpeg', 0.85));
-                };
-                img.onerror = () => {
-                    setProcessedSrc(src); 
-                };
-            }, [src, watermarkText]);
-            return <img src={processedSrc || src} alt={alt} className={`${className} transition-opacity duration-700 ${!processedSrc ? 'opacity-30' : 'opacity-100'}`} />;
-        };
+    return (
+        <div className="relative inline-block w-full h-full select-none">
+            <img 
+                src={src} 
+                alt={alt} 
+                loading="lazy"
+                className={`${className} block w-full h-auto`} 
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span className="text-white/35 font-bold text-xl md:text-3xl rotate-[-15deg] whitespace-nowrap">
+                    {watermarkText || "PORTFOLIO"}
+                </span>
+            </div>
+        </div>
+    );
+};
 
         const MediaRenderer = ({ videoUrl, coverImg, watermarkText, alt, className }) => {
             if (videoUrl && videoUrl.trim() !== '') {
