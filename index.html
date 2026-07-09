@@ -389,6 +389,12 @@
 
             const [editingId, setEditingId] = useState(null);
             const [form, setForm] = useState({ title: '', description: '', type: '全部', year: new Date().getFullYear(), month: new Date().getMonth() + 1, images: [], videoUrl: '' });
+            
+            // 💡 修复：补回丢失的三个关键状态声明，解决白屏问题
+            const [previewIndices, setPreviewIndices] = useState({});
+            const fileInputRef = useRef(null);
+            const headerFileInputRef = useRef(null);
+
             // 1. 💡 全自动初始化：从路由拉取配置及校验过期时间
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
