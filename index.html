@@ -1202,8 +1202,8 @@
                             </div>
                         </div>
 
-                        {/* 💡 终极瀑布流布局 */}
-                        <div className="gallery-columns space-y-4 md:space-y-8 text-left">
+                        {/* 💡 终极瀑布流布局：移除 space-y 干扰，纯依靠 mb-1 完美控制垂直间距 */}
+                        <div className="gallery-columns text-left block">
                             {!isLoaded && (
                                 <div className="col-span-full py-24 text-center font-bold text-zinc-300 animate-pulse tracking-widest uppercase">
                                     正在全速拉取极速画廊中...
