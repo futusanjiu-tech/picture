@@ -31,6 +31,19 @@
     
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* 优雅的细线滚动条 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.02);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.15);
+            border-radius: 4px;
+        }
+
         .invisible-scroll-box { 
             max-height: 85vh; 
             overflow-y: auto !important; 
@@ -45,9 +58,9 @@
         /* 经典圆角 */
         .rounded-big { border-radius: 1.5rem; }
         
-        /* 💡 手机端轻量级双列瀑布流 */
+        /* 💡 手机端轻量级双列瀑布流（参考淘宝紧凑间距） */
         .gallery-columns {
-            column-gap: 1rem;
+            column-gap: 0.25rem; /* 间隙调小至 4px */
             column-count: 2;
         }
         @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
@@ -1054,13 +1067,21 @@
                                                     <span className="text-[10px] font-black text-zinc-500">点击上传作品长图</span>
                                                     <span className="text-[8px] font-bold text-zinc-400 mt-1">（手机相册中长按图片，即可激活“多选”批量导入）</span>
                                                     
-                                                    <input type="file" ref={fileInputRef} onChange={(e)=>{
+                                                    {/* 💡 使用 Promise.all 完美解决多图异步覆盖问题 */}
+                                                    <input type="file" ref={fileInputRef} onChange={async (e) => {
                                                         const files = Array.from(e.target.files);
-                                                        files.forEach(f => {
-                                                            const r = new FileReader();
-                                                            r.onloadend = () => setForm(prev => ({...prev, images: [...prev.images, r.result]}));
-                                                            r.readAsDataURL(f);
+                                                        if (files.length === 0) return;
+                                                        
+                                                        const readFiles = files.map(f => {
+                                                            return new Promise((resolve) => {
+                                                                const r = new FileReader();
+                                                                r.onloadend = () => resolve(r.result);
+                                                                r.readAsDataURL(f);
+                                                            });
                                                         });
+
+                                                        const newImages = await Promise.all(readFiles);
+                                                        setForm(prev => ({...prev, images: [...prev.images, ...newImages]}));
                                                         e.target.value = ""; 
                                                     }} className="hidden" multiple accept="image/*" />
                                                 </div>
@@ -1199,10 +1220,10 @@
                                     <div 
                                         key={project.id} 
                                         style={{ borderRadius: `${adjustedRadius}px` }}
-                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
+                                        /* 💡 修改 mb-4 为 mb-1 以配合淘宝式超窄间距 */
+                                        className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-1 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}
                                     >
                                         {accessToken && showAdminUI && (
-                                            /* 🍏 移动端触控优化：在手机端（md以下）按钮设为 opacity-100 永久可见，在桌面端保持 group-hover 隐藏/悬停显示 */
                                             <div className="absolute top-3 md:top-8 right-3 md:right-8 flex gap-1.5 md:gap-3 z-[99] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-2 md:group-hover:translate-y-0">
                                                 <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="arrow-up-circle" size={12}/></button>
                                                 <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="edit-3" size={12}/></button>
@@ -1213,9 +1234,10 @@
                                             </div>
                                         )}
 
+                                        {/* 💡 修改了这里的 overflow 属性，加入 custom-scrollbar 实现优雅滑动 */}
                                         <div 
                                             style={{ borderTopLeftRadius: `${adjustedRadius}px`, borderTopRightRadius: `${adjustedRadius}px` }}
-                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-hidden bg-zinc-50"
+                                            className="relative w-full max-h-[300px] md:max-h-[600px] overflow-y-auto custom-scrollbar bg-zinc-50"
                                         >
                                             <MediaRenderer 
                                                 videoUrl={project.videoUrl} 
