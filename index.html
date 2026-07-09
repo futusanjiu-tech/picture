@@ -5,29 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PRO.FOLIO - 极速稳定画廊</title>
     
-    <!-- 🍏 PWA 手机 App 沉浸式全屏配置 (iOS 专属) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PRO.FOLIO">
     <link rel="apple-touch-icon" href="https://img.icons8.com/?size=512&id=118557&format=png">
     
-    <!-- 🤖 安卓 WebApp 沉浸式配置 -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
-    
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18.2.0",
-          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-          "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
-        }
-      }
-    </script>
 
-    <!-- 加载核心工具库 (使用国内高速 CDN，彻底安全免翻墙) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script crossorigin src="https://gcore.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://gcore.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://gcore.jsdelivr.net/npm/@babel/standalone@7.23.6/babel.min.js"></script>
     
     <style>
         /* 极致无阻无缝滚动条隐藏配置 */
@@ -73,9 +62,9 @@
 <body class="bg-white selection:bg-zinc-900 selection:text-white text-zinc-900">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
+    <script type="text/babel">
+        // ✅ 使用全局解构替代 import
+        const { useState, useEffect, useRef } = React;
 
         // ========================================================
         // 💡 离线预载本地备用演示数据 (防止新库空空如也)
@@ -328,14 +317,16 @@
                         if (match) src = match[1];
                     }
                     if (src.startsWith('//')) src = 'https:' + src;
+                    // ✅ 修复了 iframe 的 jsx 属性警告 (frameBorder, frameSpacing, allowFullScreen)
                     return (
                         <div className="aspect-video w-full rounded-t-big overflow-hidden bg-black">
-                            <iframe src={src} scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" className="w-full h-full"></iframe>
+                            <iframe src={src} scrolling="no" border="0" frameBorder="0" frameSpacing="0" allowFullScreen={true} className="w-full h-full"></iframe>
                         </div>
                     );
                 } else {
+                    // ✅ 修复了 video 的 jsx 属性警告 (autoPlay, playsInline)
                     return (
-                        <video src={videoUrl} autoplay loop muted playsinline controls className="w-full h-auto block bg-black rounded-t-big" style={{ maxHeight: '85vh' }}></video>
+                        <video src={videoUrl} autoPlay loop muted playsInline controls className="w-full h-auto block bg-black rounded-t-big" style={{ maxHeight: '85vh' }}></video>
                     );
                 }
             }
@@ -394,6 +385,25 @@
             const [previewIndices, setPreviewIndices] = useState({});
             const fileInputRef = useRef(null);
             const headerFileInputRef = useRef(null);
+
+            const triggerToast = (msg, type = "info") => {
+                setToast({ show: true, message: msg, type });
+                setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3000);
+            };
+
+            const triggerConfirm = (title, onConfirm) => {
+                setConfirmModal({ show: true, title, onConfirm });
+            };
+
+            const handleCopyToken = () => {
+                const t = document.createElement("textarea");
+                t.value = accessToken;
+                document.body.appendChild(t);
+                t.select();
+                document.execCommand('copy');
+                document.body.removeChild(t);
+                triggerToast("访问令牌已复制至剪贴板", "success");
+            };
 
             // 1. 💡 全自动初始化：从路由拉取配置及校验过期时间
             useEffect(() => {
