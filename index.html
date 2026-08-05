@@ -13,6 +13,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
 
+    <!-- Tailwind CSS & React UMD Scripts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://gcore.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://gcore.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
@@ -34,13 +35,18 @@
         
         .break-inside-avoid { break-inside: avoid; -webkit-column-break-inside: avoid; }
         body { padding-bottom: env(safe-area-inset-bottom); }
+        
+        .drag-active {
+            border-color: #18181b !important;
+            background-color: #f4f4f5 !important;
+        }
     </style>
 </head>
 <body class="bg-white selection:bg-zinc-900 selection:text-white text-zinc-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback } = React;
 
         const LOCAL_FALLBACK_CATEGORIES = [
             { id: 'All', label: '全部', order: 0 },
@@ -60,10 +66,10 @@
             {
                 id: 'local_demo',
                 title: '云端直连模式就绪',
-                description: '这是一个演示项目。您的代码已成功编译，随时可以连接您的 GitHub 数据库并输入云端图片链接。',
+                description: '这是一个演示项目。您可以拖拽/选择本地图片上传，或粘贴云端图片链接。',
                 type: '3D作品',
                 year: 2026,
-                month: 7,
+                month: 8,
                 videoUrl: '',
                 coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23f4f4f5"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%23a1a1aa" text-anchor="middle" dominant-baseline="middle">欢迎使用极速云端画廊</text></svg>',
                 imgs: []
@@ -85,14 +91,15 @@
                 case 'tag': return <svg {...svgProps}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>;
                 case 'calendar': return <svg {...svgProps}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
                 case 'clock': return <svg {...svgProps}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
-                case 'chevron-left': return <svg {...svgProps}><polyline points="15 18 9 12 15 6"></polyline></svg>;
-                case 'chevron-right': return <svg {...svgProps}><polyline points="9 18 15 12 9 6"></polyline></svg>;
                 case 'share-2': return <svg {...svgProps}><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>;
                 case 'log-out': return <svg {...svgProps}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
                 case 'layout': return <svg {...svgProps}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>;
-                case 'arrow-right': return <svg {...svgProps}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>;
                 case 'plus': return <svg {...svgProps}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
                 case 'link': return <svg {...svgProps}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+                case 'lock': return <svg {...svgProps}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+                case 'key': return <svg {...svgProps}><path d="M21 2l-2 2m-1.5 1.5l-3 3m-1.5 1.5l-3 3M3 21l3-3m0 0l2.5-2.5m-2.5 2.5L3 18m3 3l3-3"></path><circle cx="7.5" cy="7.5" r="4.5"></circle></svg>;
+                case 'settings': return <svg {...svgProps}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+                case 'refresh-cw': return <svg {...svgProps}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>;
                 default: return null;
             }
         };
@@ -110,7 +117,7 @@
             );
         };
 
-        const MediaRenderer = ({ videoUrl, coverImg, watermarkText, alt, className }) => {
+        const MediaRenderer = ({ videoUrl, coverImg, watermarkText, alt, className, onClick }) => {
             if (videoUrl && videoUrl.trim() !== '') {
                 if (videoUrl.includes('<iframe') || videoUrl.includes('player.bilibili.com') || videoUrl.includes('iframe')) {
                     let src = videoUrl;
@@ -120,17 +127,88 @@
                     }
                     if (src.startsWith('//')) src = 'https:' + src;
                     return (
-                        <div className="aspect-video w-full rounded-t-big overflow-hidden bg-black">
+                        <div className="aspect-video w-full rounded-t-2xl overflow-hidden bg-black">
                             <iframe src={src} scrolling="no" border="0" frameBorder="0" frameSpacing="0" allowFullScreen={true} className="w-full h-full"></iframe>
                         </div>
                     );
                 } else {
                     return (
-                        <video src={videoUrl} autoPlay loop muted playsInline controls className="w-full h-auto block bg-black rounded-t-big" style={{ maxHeight: '85vh' }}></video>
+                        <video src={videoUrl} autoPlay loop muted playsInline controls className="w-full h-auto block bg-black rounded-t-2xl max-h-[75vh]"></video>
                     );
                 }
             }
-            return <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} alt={alt} className={className} />;
+            return (
+                <div onClick={onClick} className="cursor-pointer group relative overflow-hidden">
+                    <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} alt={alt} className={`${className} group-hover:scale-[1.02] transition-transform duration-500`} />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-zinc-900 text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur-md transform translate-y-2 group-hover:translate-y-0 transition-all flex items-center gap-1.5">
+                            <Icon name="eye" size={14} /> 全屏预览
+                        </span>
+                    </div>
+                </div>
+            );
+        };
+
+        const LightboxModal = ({ project, initialIndex = 0, watermark, onClose }) => {
+            if (!project) return null;
+            const images = (project.imgs && project.imgs.length > 0) ? project.imgs : [project.coverImage];
+            const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') onClose();
+                    if (e.key === 'ArrowRight') setCurrentIndex(prev => (prev + 1) % images.length);
+                    if (e.key === 'ArrowLeft') setCurrentIndex(prev => (prev - 1 + images.length) % images.length);
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [images.length, onClose]);
+
+            return (
+                <div className="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-2xl flex flex-col justify-between p-4 md:p-8 text-white select-none animate-in fade-in duration-200">
+                    <div className="flex justify-between items-center z-10 max-w-7xl w-full mx-auto">
+                        <div>
+                            <h3 className="text-base md:text-2xl font-black text-white">{project.title}</h3>
+                            <p className="text-xs text-zinc-400 font-medium mt-0.5">{project.type} • {project.year}.{project.month} {images.length > 1 && `(${currentIndex + 1}/${images.length})`}</p>
+                        </div>
+                        <button onClick={onClose} className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all hover:scale-110">
+                            <Icon name="x" size={20} />
+                        </button>
+                    </div>
+
+                    <div className="relative flex-1 flex items-center justify-center my-4 overflow-hidden max-w-7xl w-full mx-auto">
+                        {images.length > 1 && (
+                            <button onClick={() => setCurrentIndex(prev => (prev - 1 + images.length) % images.length)} className="absolute left-2 md:left-6 z-10 p-3 md:p-4 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all">
+                                ‹
+                            </button>
+                        )}
+                        
+                        <div className="max-w-full max-h-[78vh] flex items-center justify-center">
+                            {project.videoUrl ? (
+                                <MediaRenderer videoUrl={project.videoUrl} coverImg={images[currentIndex]} watermarkText={watermark} alt={project.title} className="max-h-[75vh] w-auto rounded-2xl object-contain" />
+                            ) : (
+                                <WatermarkedDisplay src={images[currentIndex]} watermarkText={watermark} alt={project.title} className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl" />
+                            )}
+                        </div>
+
+                        {images.length > 1 && (
+                            <button onClick={() => setCurrentIndex(prev => (prev + 1) % images.length)} className="absolute right-2 md:right-6 z-10 p-3 md:p-4 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all">
+                                ›
+                            </button>
+                        )}
+                    </div>
+
+                    {images.length > 1 && (
+                        <div className="flex justify-center gap-2.5 overflow-x-auto py-2 no-scrollbar z-10 max-w-3xl mx-auto">
+                            {images.map((img, idx) => (
+                                <button key={idx} onClick={() => setCurrentIndex(idx)} className={`w-12 h-12 md:w-16 md:h-16 rounded-xl overflow-hidden border-2 transition-all ${currentIndex === idx ? 'border-white scale-110 shadow-xl' : 'border-transparent opacity-40 hover:opacity-80'}`}>
+                                    <img src={img} className="w-full h-full object-cover" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
         };
 
         const b64EncodeUnicode = (str) => {
@@ -151,6 +229,45 @@
             return new TextDecoder().decode(bytes);
         };
 
+        const readFileAsDataURL = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            });
+        };
+
+        const processImageSafe = async (base64Str, maxWidth = 1200, quality = 0.75) => {
+            const perform = (src, w, q) => new Promise(res => {
+                const img = new Image(); 
+                img.src = src;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width, height = img.height;
+                    if (width > w) { 
+                        height = (w / width) * height; 
+                        width = w; 
+                    }
+                    canvas.width = width; 
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true; 
+                    ctx.imageSmoothingQuality = "high";
+                    ctx.drawImage(img, 0, 0, width, height); 
+                    res(canvas.toDataURL('image/jpeg', q));
+                };
+                img.onerror = () => res(src);
+            });
+            let result = await perform(base64Str, maxWidth, quality);
+            while (result.length > 300000 && maxWidth > 400) {
+                maxWidth = Math.floor(maxWidth * 0.85); 
+                quality = Math.max(0.4, quality - 0.1); 
+                result = await perform(base64Str, maxWidth, quality);
+            }
+            return result;
+        };
+
         const App = () => {
             const [owner, setOwner] = useState('');
             const [repo, setRepo] = useState('');
@@ -159,15 +276,25 @@
             const [accessToken, setAccessToken] = useState('');
             const [fileSha, setFileSha] = useState(''); 
             
+            const [loginOwner, setLoginOwner] = useState('');
+            const [loginRepo, setLoginRepo] = useState('');
+            const [loginBranch, setLoginBranch] = useState('main');
+            const [loginToken, setLoginToken] = useState('');
+            const [showLoginModal, setShowLoginModal] = useState(false);
+
             const [isLoaded, setIsLoaded] = useState(false);
             const [isAdminMode, setIsAdminMode] = useState(false);
             const [showAdminUI, setShowAdminUI] = useState(false);
             const [isSyncing, setIsSyncing] = useState(false);
+            const [isProcessingFiles, setIsProcessingFiles] = useState(false);
             const [isExpired, setIsExpired] = useState(false); 
+            const [isDragOver, setIsDragOver] = useState(false);
 
+            // Modals & UI States
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
             const [shareModal, setShareModal] = useState(false); 
+            const [activeLightbox, setActiveLightbox] = useState({ open: false, project: null, index: 0 });
 
             const [config, setConfig] = useState(LOCAL_FALLBACK_CONFIG);
             const [categories, setCategories] = useState(LOCAL_FALLBACK_CATEGORIES);
@@ -183,15 +310,17 @@
                 year: new Date().getFullYear(), 
                 month: new Date().getMonth() + 1, 
                 imageUrlsText: '', 
+                images: [],
                 videoUrl: '' 
             });
             
             const [previewIndices, setPreviewIndices] = useState({});
             const headerFileInputRef = useRef(null);
+            const localProjectFileInputRef = useRef(null);
 
             const triggerToast = (msg, type = "info") => {
                 setToast({ show: true, message: msg, type });
-                setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3000);
+                setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 3500);
             };
 
             const triggerConfirm = (title, onConfirm) => { 
@@ -225,9 +354,9 @@
                     }
                 }
 
-                const cachedOwner = localStorage.getItem('gh_portfolio_owner');
-                const cachedRepo = localStorage.getItem('gh_portfolio_repo');
-                const cachedToken = localStorage.getItem('gh_portfolio_token');
+                const cachedOwner = localStorage.getItem('gh_portfolio_owner') || '';
+                const cachedRepo = localStorage.getItem('gh_portfolio_repo') || '';
+                const cachedToken = localStorage.getItem('gh_portfolio_token') || '';
 
                 if (cachedToken) { 
                     setAccessToken(cachedToken); 
@@ -235,18 +364,22 @@
                     setShowAdminUI(true); 
                 }
 
-                if (!urlOwner && !urlRepo && cachedOwner && cachedRepo) {
-                    window.location.href = `${window.location.origin}${window.location.pathname}?owner=${cachedOwner}&repo=${cachedRepo}&branch=${urlBranch}`;
-                    return;
-                }
+                const effectiveOwner = urlOwner || cachedOwner;
+                const effectiveRepo = urlRepo || cachedRepo;
+                const effectiveBranch = urlBranch;
 
-                if (urlOwner && urlRepo) {
-                    setOwner(urlOwner); 
-                    setRepo(urlRepo); 
-                    setBranch(urlBranch);
-                    localStorage.setItem('gh_portfolio_owner', urlOwner); 
-                    localStorage.setItem('gh_portfolio_repo', urlRepo);
-                    loadDataFromGitHub(urlOwner, urlRepo, urlBranch, cachedToken);
+                setLoginOwner(effectiveOwner);
+                setLoginRepo(effectiveRepo);
+                setLoginBranch(effectiveBranch);
+                setLoginToken(cachedToken);
+
+                if (effectiveOwner && effectiveRepo) {
+                    setOwner(effectiveOwner); 
+                    setRepo(effectiveRepo); 
+                    setBranch(effectiveBranch);
+                    localStorage.setItem('gh_portfolio_owner', effectiveOwner); 
+                    localStorage.setItem('gh_portfolio_repo', effectiveRepo);
+                    loadDataFromGitHub(effectiveOwner, effectiveRepo, effectiveBranch, cachedToken);
                 } else {
                     setIsLoaded(true);
                 }
@@ -254,7 +387,7 @@
 
             const fetchShaOnly = async (own, rep, br, tok) => {
                 try {
-                    const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
+                    const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } : {};
                     const res = await fetch(`https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}_${Math.random()}`, { headers });
                     if (res.ok) {
                         const data = await res.json();
@@ -269,11 +402,10 @@
             const loadDataFromGitHub = async (own, rep, br, tok) => {
                 const useApiFirst = !!tok;
                 const cacheBuster = `${Date.now()}_${Math.random()}`;
-                const cdnUrl = `https://raw.gitmirror.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
-                const jsdelivrUrl = `https://gcore.jsdelivr.net/gh/${own}/${rep}@${br}/${path}?t=${cacheBuster}`;
                 const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${cacheBuster}`;
                 const rawUrl = `https://raw.githubusercontent.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
-                const tokenHeaders = tok ? { 'Authorization': `Bearer ${tok.trim()}` } : {};
+                const cdnUrl = `https://raw.gitmirror.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
+                const tokenHeaders = tok ? { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } : {};
 
                 if (useApiFirst) {
                     try {
@@ -285,7 +417,7 @@
                                 setConfig(LOCAL_FALLBACK_CONFIG); 
                                 setFileSha(''); 
                                 localStorage.removeItem('github_file_sha');
-                                triggerToast("✨ 仓库连接成功！这是全新的画廊，已自动加载演示模板。", "success");
+                                triggerToast("仓库连接成功！这是全新的画廊，已载入演示模板。", "success");
                                 setIsLoaded(true); 
                                 return;
                             }
@@ -297,7 +429,7 @@
                             localStorage.setItem('github_file_sha', apiData.sha); 
                         }
                         applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content.replace(/\s/g, ''))));
-                        triggerToast("管理后台：已极速同步云端最新数据", "success");
+                        triggerToast("已成功同步云端最新数据", "success");
                         setIsLoaded(true); 
                         return;
                     } catch(e) {
@@ -308,7 +440,7 @@
                                 setCategories(LOCAL_FALLBACK_CATEGORIES); 
                                 setConfig(LOCAL_FALLBACK_CONFIG); 
                                 setFileSha('');
-                                triggerToast("✨ 直连连接成功！", "success"); 
+                                triggerToast("直连连接成功！", "success"); 
                                 setIsLoaded(true); 
                                 return;
                             }
@@ -318,23 +450,13 @@
                             setIsLoaded(true); 
                             return;
                         } catch(rawErr) { 
-                            triggerToast(`获取数据失败，请确认网络代理或 Token 权限。`, "error"); 
+                            triggerToast(`获取数据失败，请检查 Token 权限或仓库设置。`, "error"); 
                         }
                     }
                 }
 
                 try {
                     const res = await fetch(cdnUrl);
-                    if (res.ok) { 
-                        applyLoadedData(await res.json()); 
-                        fetchShaOnly(own, rep, br, tok); 
-                        setIsLoaded(true); 
-                        return; 
-                    }
-                } catch(e) {}
-                
-                try {
-                    const res = await fetch(jsdelivrUrl);
                     if (res.ok) { 
                         applyLoadedData(await res.json()); 
                         fetchShaOnly(own, rep, br, tok); 
@@ -355,7 +477,7 @@
                         return;
                     }
                 } catch(e) { 
-                    triggerToast("目前处于本地离线模式", "info"); 
+                    triggerToast("目前处于本地离线预览模式", "info"); 
                 } finally { 
                     setIsLoaded(true); 
                 }
@@ -369,25 +491,35 @@
 
             const saveDataToGitHub = async (updatedConfig, updatedCats, updatedProjs) => {
                 if (!accessToken) { 
-                    triggerToast("您当前处于只读模式。请先绑定您的安全写入令牌。", "warning"); 
+                    triggerToast("未配置保存密钥，目前已保存至本地视图。可在编辑顶部面板中填入 Token 写入云端。", "warning"); 
                     return; 
                 }
                 setIsSyncing(true);
                 try {
+                    const targetConfig = updatedConfig !== undefined ? updatedConfig : config;
+                    const targetCats = updatedCats !== undefined ? updatedCats : categories;
+                    const targetProjs = updatedProjs !== undefined ? updatedProjs : projects;
+
                     const commitData = { 
-                        config: updatedConfig || config, 
-                        categories: updatedCats || categories, 
-                        projects: updatedProjs || projects 
+                        config: targetConfig, 
+                        categories: targetCats, 
+                        projects: targetProjs 
                     };
                     const base64Content = b64EncodeUnicode(JSON.stringify(commitData));
-                    let sha = fileSha || localStorage.getItem('github_file_sha') || '';
                     
+                    let sha = fileSha || localStorage.getItem('github_file_sha') || '';
                     try {
                         const shaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}&t=${Date.now()}`, { 
-                            headers: { 'Authorization': `Bearer ${accessToken.trim()}` } 
+                            headers: { 
+                                'Authorization': `Bearer ${accessToken.trim()}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            } 
                         });
                         if (shaRes.ok) { 
-                            sha = (await shaRes.json()).sha; 
+                            const shaData = await shaRes.json();
+                            sha = shaData.sha;
+                            setFileSha(sha);
+                            localStorage.setItem('github_file_sha', sha);
                         } else if (shaRes.status === 404) { 
                             sha = ''; 
                         }
@@ -395,7 +527,7 @@
 
                     const payload = { 
                         content: base64Content, 
-                        message: `Upload via Pro.folio App [${new Date().toLocaleString()}]`, 
+                        message: `Update via PRO.FOLIO App [${new Date().toLocaleString()}]`, 
                         branch: branch
                     };
                     if (sha) {
@@ -406,7 +538,8 @@
                         method: 'PUT',
                         headers: { 
                             'Content-Type': 'application/json', 
-                            'Authorization': `Bearer ${accessToken.trim()}` 
+                            'Authorization': `Bearer ${accessToken.trim()}`,
+                            'Accept': 'application/vnd.github.v3+json'
                         },
                         body: JSON.stringify(payload)
                     });
@@ -418,10 +551,11 @@
                             localStorage.setItem('github_file_sha', resData.content.sha); 
                         }
                     } else {
-                        if (res.status === 401) throw new Error("Token 密钥不正确");
-                        else if (res.status === 403) throw new Error("权限不足，请确认已勾选 Read and write 权限");
-                        else if (res.status === 409) throw new Error("操作冲突，请刷新页面后再试！");
-                        else throw new Error("写入请求被拒绝");
+                        const errBody = await res.json().catch(() => ({}));
+                        if (res.status === 401) throw new Error("Token 访问密钥不正确或已过期");
+                        else if (res.status === 403) throw new Error("权限不足，请确认已勾选 repo 读写权限");
+                        else if (res.status === 409) throw new Error("操作冲突，已获取最新版本，请重试！");
+                        else throw new Error(errBody.message || "写入请求被 GitHub 拒绝");
                     }
                 } catch (e) { 
                     throw e; 
@@ -430,33 +564,43 @@
                 }
             };
 
-            const processImageSafe = async (base64Str, maxWidth = 1200, quality = 0.75) => {
-                const perform = (src, w, q) => new Promise(res => {
-                    const img = new Image(); 
-                    img.src = src;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width, height = img.height;
-                        if (width > w) { 
-                            height = (w / width) * height; 
-                            width = w; 
-                        }
-                        canvas.width = width; 
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.imageSmoothingEnabled = true; 
-                        ctx.imageSmoothingQuality = "high";
-                        ctx.drawImage(img, 0, 0, width, height); 
-                        res(canvas.toDataURL('image/jpeg', q));
-                    };
-                });
-                let result = await perform(base64Str, maxWidth, quality);
-                while (result.length > 200000 && maxWidth > 400) {
-                    maxWidth = Math.floor(maxWidth * 0.85); 
-                    quality = Math.max(0.4, quality - 0.1); 
-                    result = await perform(base64Str, maxWidth, quality);
+            const handleAdminLoginSubmit = (e) => {
+                e.preventDefault();
+                const tok = loginToken.trim();
+                const own = loginOwner.trim();
+                const rep = loginRepo.trim();
+                const br = loginBranch.trim() || 'main';
+
+                if (!own || !rep) {
+                    triggerToast("请输入 GitHub 用户名与仓库名称", "warning");
+                    return;
                 }
-                return result;
+
+                localStorage.setItem('gh_portfolio_owner', own);
+                localStorage.setItem('gh_portfolio_repo', rep);
+                if (tok) {
+                    localStorage.setItem('gh_portfolio_token', tok);
+                    setAccessToken(tok);
+                    setIsAdminMode(true);
+                    setShowAdminUI(true);
+                }
+
+                setOwner(own);
+                setRepo(rep);
+                setBranch(br);
+
+                loadDataFromGitHub(own, rep, br, tok);
+                setShowLoginModal(false);
+                triggerToast(tok ? "登录成功！已进入管理员编辑模式" : "已载入仓库，目前处于只读预览模式", "success");
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem('gh_portfolio_token');
+                setAccessToken('');
+                setIsAdminMode(false);
+                setShowAdminUI(false);
+                setShowLoginModal(false);
+                triggerToast("已安全退出管理员编辑模式", "info");
             };
 
             const handleSetupSubmit = (e) => {
@@ -472,17 +616,63 @@
                     localStorage.setItem('gh_portfolio_token', gToken); 
                     setAccessToken(gToken); 
                     setIsAdminMode(true); 
+                    setShowAdminUI(true);
                 }
-                window.location.href = `${window.location.origin}${window.location.pathname}?owner=${gOwner}&repo=${gRepo}&branch=${gBranch}`;
+                setOwner(gOwner);
+                setRepo(gRepo);
+                setBranch(gBranch);
+                loadDataFromGitHub(gOwner, gRepo, gBranch, gToken);
+            };
+
+            const handleLocalFiles = async (fileList) => {
+                if (!fileList || fileList.length === 0) return;
+                setIsProcessingFiles(true);
+                try {
+                    const newImages = [...form.images];
+                    for (let i = 0; i < fileList.length; i++) {
+                        const file = fileList[i];
+                        if (file.type.startsWith('image/')) {
+                            const rawData = await readFileAsDataURL(file);
+                            const compressed = await processImageSafe(rawData, 1200, 0.75);
+                            newImages.push(compressed);
+                        }
+                    }
+                    setForm(prev => ({ ...prev, images: newImages }));
+                    triggerToast(`已成功载入 ${fileList.length} 张本地图片`, "success");
+                } catch (err) {
+                    triggerToast(`读取图片失败: ${err.message}`, "error");
+                } finally {
+                    setIsProcessingFiles(false);
+                }
+            };
+
+            const handleFileDrop = (e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleLocalFiles(e.dataTransfer.files);
+                }
+            };
+
+            const handleRemoveImageIndex = (idxToRemove) => {
+                setForm(prev => ({
+                    ...prev,
+                    images: prev.images.filter((_, idx) => idx !== idxToRemove)
+                }));
             };
 
             const handleUpload = async (e) => {
                 e.preventDefault();
                 
-                const urls = (form.imageUrlsText || '').split('\n').map(u => u.trim()).filter(Boolean);
+                const pastedUrls = (form.imageUrlsText || '')
+                    .split('\n')
+                    .map(u => u.trim())
+                    .filter(Boolean);
 
-                if (urls.length === 0 && (!form.videoUrl || form.videoUrl.trim() === '')) {
-                    return triggerToast('请至少粘贴一张图片链接，或填写视频链接', "warning");
+                const allImages = [...form.images, ...pastedUrls];
+
+                if (allImages.length === 0 && (!form.videoUrl || form.videoUrl.trim() === '')) {
+                    return triggerToast('请选择本地图片、粘贴图片链接或填写视频链接', "warning");
                 }
                 
                 setIsSyncing(true);
@@ -490,10 +680,8 @@
                 
                 try {
                     let thumb = '';
-                    let processedImgs = urls;
-                    
-                    if (urls.length > 0) {
-                        thumb = urls[0];
+                    if (allImages.length > 0) {
+                        thumb = allImages[0];
                     } else {
                         thumb = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23f4f4f5"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%23a1a1aa" text-anchor="middle" dominant-baseline="middle">视频作品缓冲中...</text></svg>';
                     }
@@ -508,22 +696,24 @@
                         videoUrl: form.videoUrl,
                         id: pid,
                         coverImage: thumb,
-                        imgs: processedImgs,
+                        imgs: allImages,
                         isHidden: editingId ? (existingProj?.isHidden || false) : false,
                         priority: editingId ? (existingProj?.priority || Date.now()) : Date.now(),
                     };
 
-                    let newProjectsList = editingId ? projects.map(p => p.id === editingId ? newProj : p) : [newProj, ...projects];
+                    let newProjectsList = editingId 
+                        ? projects.map(p => p.id === editingId ? newProj : p) 
+                        : [newProj, ...projects];
 
                     await saveDataToGitHub(config, categories, newProjectsList);
                     
                     setProjects(newProjectsList);
-                    triggerToast("发布成功！云端链接已无缝锁入数据库", "success");
+                    triggerToast(editingId ? "作品已更新并保存至云端" : "成功发布新作品并加密写入云端！", "success");
 
-                    setForm({ title: '', description: '', type: '全部', year: new Date().getFullYear(), month: new Date().getMonth() + 1, imageUrlsText: '', videoUrl: '' });
+                    setForm({ title: '', description: '', type: '全部', year: new Date().getFullYear(), month: new Date().getMonth() + 1, imageUrlsText: '', images: [], videoUrl: '' });
                     setEditingId(null);
                 } catch (e) {
-                    triggerToast(`同步失败: ${e.message}`, "error");
+                    triggerToast(`保存失败: ${e.message}`, "error");
                 } finally {
                     setIsSyncing(false);
                 }
@@ -552,12 +742,12 @@
             };
 
             const handleDeleteProject = (projectId) => {
-                triggerConfirm('确认要永久从仓库中移除此作品吗?', async () => {
+                triggerConfirm('确认要永久从 GitHub 仓库中移除此作品吗？此操作不可撤销。', async () => {
                     const nextProjs = projects.filter(p => p.id !== projectId);
                     try { 
                         await saveDataToGitHub(config, categories, nextProjs); 
                         setProjects(nextProjs); 
-                        triggerToast("作品已成功删除", "success"); 
+                        triggerToast("作品已成功删除并同步至云端", "success"); 
                     } catch (e) { 
                         triggerToast(`删除失败: ${e.message}`, "error"); 
                     }
@@ -572,7 +762,8 @@
                     type: project.type || '全部',
                     year: project.year || new Date().getFullYear(),
                     month: project.month || new Date().getMonth() + 1,
-                    imageUrlsText: (project.imgs && Array.isArray(project.imgs)) ? project.imgs.join('\n') : '',
+                    imageUrlsText: '',
+                    images: (project.imgs && Array.isArray(project.imgs)) ? [...project.imgs] : [project.coverImage],
                     videoUrl: project.videoUrl || ''
                 });
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -587,6 +778,7 @@
                     year: new Date().getFullYear(), 
                     month: new Date().getMonth() + 1, 
                     imageUrlsText: '', 
+                    images: [],
                     videoUrl: '' 
                 });
             };
@@ -601,7 +793,7 @@
                     try { 
                         await saveDataToGitHub(newConfig, categories, projects); 
                         setConfig(newConfig); 
-                        triggerToast("封面更新成功", "success"); 
+                        triggerToast("封面背景已更新", "success"); 
                     } catch (err) { 
                         triggerToast(`更新封面失败: ${err.message}`, "error"); 
                     }
@@ -620,7 +812,7 @@
                 t.select(); 
                 document.execCommand('copy'); 
                 document.body.removeChild(t);
-                triggerToast(days > 0 ? `限时 ${days} 天链接已复制！客户过期将无法访问` : '永久链接已复制！', 'success');
+                triggerToast(days > 0 ? `限时 ${days} 天链接已复制！` : '永久链接已复制！', 'success');
                 setShareModal(false);
             };
 
@@ -642,29 +834,29 @@
                     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8">
                         <div className="w-full max-w-xl bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 text-left">
                             <div className="w-16 h-16 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg mb-8">G</div>
-                            <h2 className="text-3xl font-black mb-3">连接您的 GitHub 终极数据库</h2>
-                            <p className="text-slate-400 text-xs font-semibold mb-8 uppercase tracking-wider">GitHub High-Speed CDN Onboarding</p>
+                            <h2 className="text-3xl font-black mb-3">连接您的 GitHub 画廊数据库</h2>
+                            <p className="text-slate-400 text-xs font-semibold mb-8 uppercase tracking-wider">GitHub Portfolio Onboarding</p>
                             
                             <form onSubmit={handleSetupSubmit} className="space-y-6">
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 1：GitHub 用户名 (Owner)</label>
-                                        <input required name="gOwner" placeholder="例如：yourname" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input required name="gOwner" defaultValue={loginOwner} placeholder="例如：yourname" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 2：公开仓库名称 (Repo)</label>
-                                        <input required name="gRepo" placeholder="例如：picture" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input required name="gRepo" defaultValue={loginRepo} placeholder="例如：picture" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 3：默认分支 (Branch)</label>
-                                        <input required name="gBranch" defaultValue="main" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input required name="gBranch" defaultValue={loginBranch || "main"} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 4：GitHub 访问令牌 (Token)</label>
-                                        <input name="gToken" type="password" placeholder="ghp_ 开头，需勾选 repo 权限 (仅上传时需要)" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 4：GitHub 访问令牌 (Token - 可选)</label>
+                                        <input name="gToken" type="password" defaultValue={loginToken} placeholder="ghp_ 开头（填入后即可启用发布与修改）" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                 </div>
-                                <button type="submit" className="w-full py-5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg shadow-slate-100 transition-all">极速绑定并开启空间</button>
+                                <button type="submit" className="w-full py-5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg shadow-slate-100 transition-all">绑定并开启画廊空间</button>
                             </form>
                         </div>
                     </div>
@@ -695,7 +887,7 @@
                     {isSyncing && (
                         <div className="fixed inset-0 z-[1000] bg-white/70 backdrop-blur-md flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
                             <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-950 rounded-full animate-spin"></div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">正在与云端数据库同步中...</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">正在与 GitHub 云端同步中...</p>
                         </div>
                     )}
 
@@ -708,10 +900,10 @@
                     {confirmModal.show && (
                         <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
                             <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
-                                <h3 className="text-sm font-black mb-6 text-zinc-900">{confirmModal.title}</h3>
+                                <h3 className="text-sm font-black mb-6 text-zinc-900 leading-relaxed">{confirmModal.title}</h3>
                                 <div className="flex gap-4">
-                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500">取消</button>
-                                    <button onClick={() => { confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-full text-xs font-black">确认</button>
+                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
+                                    <button onClick={() => { confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-full text-xs font-black shadow-lg hover:bg-red-700">确认删除</button>
                                 </div>
                             </div>
                         </div>
@@ -726,42 +918,77 @@
                                 <div className="space-y-3 mb-6">
                                     <button onClick={() => handleCopyShareLink(0)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>永久有效</span> <span className="text-[10px] text-zinc-400 font-bold">无限制</span></button>
                                     <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期项目提案</span></button>
-                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center"><span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">阅后即焚级防护</span></button>
+                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center"><span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">高安全性</span></button>
                                 </div>
                                 <button onClick={() => setShareModal(false)} className="py-3 px-6 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
                             </div>
                         </div>
                     )}
 
+                    {activeLightbox.open && (
+                        <LightboxModal 
+                            project={activeLightbox.project} 
+                            initialIndex={activeLightbox.index} 
+                            watermark={config?.watermark} 
+                            onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })} 
+                        />
+                    )}
+
+                    {/* Navigation Bar */}
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 md:px-10 h-16 md:h-20 flex items-center justify-between">
                         <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => window.location.href='/'}>PORTFOLIO.LIVE</div>
-                        <div className="flex gap-2">
-                            {accessToken ? (
-                                <button onClick={() => setShowAdminUI(!showAdminUI)} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-600'}`}>{showAdminUI ? '画廊预览' : '内容发布'}</button>
-                            ) : (
-                                <button onClick={() => {
-                                    const tok = prompt("请输入您的 GitHub 个人令牌 (Token)：");
-                                    if (tok) { localStorage.setItem('gh_portfolio_token', tok); window.location.reload(); }
-                                }} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-[10px] font-black uppercase tracking-wider">设置令牌</button>
-                            )}
-                            {isAdminMode && (
-                                <button onClick={() => { localStorage.removeItem('gh_portfolio_token'); localStorage.removeItem('gh_portfolio_owner'); localStorage.removeItem('gh_portfolio_repo'); window.location.reload(); }} className="text-zinc-300 hover:text-red-500 transition-colors"><Icon name="log-out" size={16} /></button>
-                            )}
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setShowAdminUI(!showAdminUI)} 
+                                className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                            >
+                                <Icon name={showAdminUI ? "eye" : "edit-3"} size={14} />
+                                {showAdminUI ? '画廊预览模式' : '管理与创作后台'}
+                            </button>
                         </div>
                     </nav>
 
+                    {/* Main Workspace */}
                     <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-2 md:px-10 max-w-gallery">
-                        {accessToken && showAdminUI && (
+                        {showAdminUI && (
                             <div className="space-y-6 mb-24 animate-in slide-in-from-top-6 duration-700 text-left">
+                                {!accessToken && (
+                                    <div className="p-6 bg-zinc-900 text-white rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
+                                                <Icon name="key" size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black">配置 GitHub 写入 Token (可选)</h4>
+                                                <p className="text-xs text-zinc-400">填入 Token 即可开启云端实时自动保存；未填入时修改保存在当前浏览器。</p>
+                                            </div>
+                                        </div>
+                                        <form onSubmit={(e) => {
+                                            e.preventDefault();
+                                            const tok = e.target.token.value.trim();
+                                            if (tok) {
+                                                localStorage.setItem('gh_portfolio_token', tok);
+                                                setAccessToken(tok);
+                                                setIsAdminMode(true);
+                                                triggerToast("GitHub Token 已成功保存！云端同步就绪", "success");
+                                            }
+                                        }} className="flex gap-2 w-full md:w-auto">
+                                            <input name="token" type="password" placeholder="ghp_ 开头的 Token..." className="bg-white/10 text-white border border-white/20 rounded-xl px-4 py-2 text-xs outline-none font-mono placeholder:text-zinc-500 w-full md:w-64" />
+                                            <button type="submit" className="px-5 py-2 bg-white text-zinc-900 hover:bg-zinc-100 rounded-xl text-xs font-black shrink-0">保存凭据</button>
+                                        </form>
+                                    </div>
+                                )}
+
                                 <div className="p-6 md:p-10 bg-zinc-900 rounded-3xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
                                     <div className="text-left">
-                                        <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 极速工作台 (云直连版)</h3>
-                                        <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">图片直连腾讯云 COS，数据库体积降低 99%，手机端加载已达性能巅峰。</p>
+                                        <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 工作台 (画廊定制与内容发布)</h3>
+                                        <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">拖拽上传本地图片或选择云端直连，即时排版呈现。</p>
                                     </div>
                                     <button onClick={() => setShareModal(true)} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"><Icon name="share-2" size={14}/> 分享空间地址</button>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
+                                    {/* Preference & Category Customization Panel */}
                                     <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-2"><Icon name="layout" size={14}/> 主页偏好定制</h4>
                                         <div className="space-y-4">
@@ -785,13 +1012,15 @@
                                                 <input type="file" ref={headerFileInputRef} onChange={handleHeaderUpload} className="hidden" accept="image/*" />
                                             </div>
 
-                                            <div className="space-y-1 pt-2 border-t border-zinc-200">
-                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">安全备份令牌 (防遗失)</label>
-                                                <div className="flex gap-2">
-                                                    <input type="text" readOnly value={accessToken} className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-2 outline-none text-[10px] font-mono text-zinc-400 select-all" />
-                                                    <button type="button" onClick={handleCopyToken} className="px-3 py-2 bg-zinc-950 text-white hover:bg-zinc-800 rounded-xl text-[9px] font-black uppercase shrink-0">复制</button>
+                                            {accessToken && (
+                                                <div className="space-y-1 pt-2 border-t border-zinc-200">
+                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">云端绑定 Token 令牌</label>
+                                                    <div className="flex gap-2">
+                                                        <input type="text" readOnly value={accessToken} className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-2 outline-none text-[10px] font-mono text-zinc-400 select-all" />
+                                                        <button type="button" onClick={handleCopyToken} className="px-3 py-2 bg-zinc-950 text-white hover:bg-zinc-800 rounded-xl text-[9px] font-black uppercase shrink-0">复制</button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                             <button type="button" onClick={() => saveDataToGitHub(config, categories, projects)} className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-white font-black text-xs rounded-xl uppercase shadow-md transition-colors">手动保存当前定制</button>
                                         </div>
 
@@ -843,37 +1072,86 @@
                                         </div>
                                     </div>
                                     
+                                    {/* Content Upload & Form Panel */}
                                     <div className="lg:col-span-2 p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-6 flex items-center gap-2">
-                                            <Icon name={editingId ? "edit-3" : "plus"} size={14}/> {editingId ? '二次编辑作品信息' : '快捷发布新作品数据'}
+                                            <Icon name={editingId ? "edit-3" : "plus"} size={14}/> {editingId ? '二次编辑作品信息' : '作品发布与上传中心'}
                                         </h4>
+                                        
                                         <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                                             <div className="space-y-3">
-                                                <input required value={form.title} onChange={e=>setForm({...form, title:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs shadow-sm" placeholder="作品标题名称" />
+                                                <input required value={form.title} onChange={e=>setForm({...form, title:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs shadow-sm font-bold text-zinc-900" placeholder="作品标题名称" />
                                                 <div className="flex gap-2">
-                                                    <select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs shadow-sm cursor-pointer">
+                                                    <select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs shadow-sm cursor-pointer font-medium">
                                                         {categories.map(c => <option key={c.id} value={c.label}>{c.label}</option>)}
                                                     </select>
-                                                    <input type="number" value={form.year} onChange={e=>setForm({...form, year:e.target.value})} className="w-20 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm" />
-                                                    <input type="number" value={form.month} onChange={e=>setForm({...form, month:e.target.value})} className="w-12 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm" />
+                                                    <input type="number" value={form.year} onChange={e=>setForm({...form, year:e.target.value})} className="w-20 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm font-mono" />
+                                                    <input type="number" value={form.month} onChange={e=>setForm({...form, month:e.target.value})} className="w-12 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm font-mono" />
                                                 </div>
-                                                <input value={form.videoUrl || ''} onChange={e=>setForm({...form, videoUrl:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-big px-5 py-3.5 outline-none text-xs shadow-sm font-mono" placeholder="动态视频链接 (腾讯云直连 MP4 / B站iframe)" />
-                                                <textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-big px-6 py-4 outline-none text-xs h-24 shadow-sm" placeholder="作品简述..." />
+                                                <input value={form.videoUrl || ''} onChange={e=>setForm({...form, videoUrl:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs shadow-sm font-mono" placeholder="动态视频链接 (MP4 / B站 iframe)" />
+                                                <textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-4 outline-none text-xs h-28 shadow-sm leading-relaxed" placeholder="作品简述与创作背景..." />
                                             </div>
-                                            <div className="space-y-4">
-                                                
-                                                <div className="relative">
-                                                    <div className="absolute top-4 left-5 text-zinc-300 pointer-events-none"><Icon name="link" size={16}/></div>
-                                                    <textarea 
-                                                        value={form.imageUrlsText || ''} 
-                                                        onChange={e=>setForm({...form, imageUrlsText:e.target.value})} 
-                                                        className="w-full bg-white border border-zinc-200 rounded-big pl-12 pr-6 py-4 outline-none text-xs h-40 shadow-sm font-mono leading-loose placeholder:leading-relaxed whitespace-pre" 
-                                                        placeholder={"在此粘贴腾讯云 COS 图片链接 (多张图片请换行分隔)...\n\n例如:\nhttps://my-bucket.cos.../img1.jpg\nhttps://my-bucket.cos.../img2.jpg"}
+                                            
+                                            <div className="space-y-4 flex flex-col justify-between">
+                                                {/* Local File Dropzone */}
+                                                <div 
+                                                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                                                    onDragLeave={() => setIsDragOver(false)}
+                                                    onDrop={handleFileDrop}
+                                                    onClick={() => localProjectFileInputRef.current.click()}
+                                                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver ? 'drag-active' : 'border-zinc-200 hover:border-zinc-400 bg-white'}`}
+                                                >
+                                                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-600">
+                                                        <Icon name="upload" size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-zinc-700">点击选择本地图片 或 将图片拖拽至此</p>
+                                                        <p className="text-[9px] text-zinc-400 font-medium">支持多图选中（自动高保真瘦身压缩）</p>
+                                                    </div>
+                                                    <input 
+                                                        type="file" 
+                                                        ref={localProjectFileInputRef} 
+                                                        onChange={(e) => handleLocalFiles(e.target.files)} 
+                                                        multiple 
+                                                        accept="image/*" 
+                                                        className="hidden" 
                                                     />
                                                 </div>
 
-                                                <button disabled={isSyncing} type="submit" className="w-full py-4 bg-zinc-950 text-white rounded-xl font-black shadow-lg text-xs uppercase tracking-widest active:scale-95 transition-all">
-                                                    {isSyncing ? "正在安全写入仓..." : editingId ? "保存并修改数据" : "确认发布空间"}
+                                                {/* Selected Local Images Preview */}
+                                                {form.images.length > 0 && (
+                                                    <div className="space-y-1">
+                                                        <span className="text-[9px] font-black text-zinc-400 uppercase">已选择本地图片 ({form.images.length})：</span>
+                                                        <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
+                                                            {form.images.map((imgSrc, idx) => (
+                                                                <div key={idx} className="relative group shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-zinc-200 shadow-sm">
+                                                                    <img src={imgSrc} className="w-full h-full object-cover" />
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={(e) => { e.stopPropagation(); handleRemoveImageIndex(idx); }}
+                                                                        className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    >
+                                                                        <Icon name="x" size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Optional Cloud Link Input */}
+                                                <div className="relative">
+                                                    <div className="absolute top-3 left-4 text-zinc-300 pointer-events-none"><Icon name="link" size={14}/></div>
+                                                    <textarea 
+                                                        value={form.imageUrlsText || ''} 
+                                                        onChange={e=>setForm({...form, imageUrlsText:e.target.value})} 
+                                                        className="w-full bg-white border border-zinc-200 rounded-2xl pl-10 pr-4 py-3 outline-none text-[11px] h-20 shadow-sm font-mono whitespace-pre placeholder:text-zinc-300" 
+                                                        placeholder="或粘贴网络图片/COS链接 (换行分隔多张)..."
+                                                    />
+                                                </div>
+
+                                                <button disabled={isSyncing || isProcessingFiles} type="submit" className="w-full py-4 bg-zinc-950 text-white rounded-xl font-black shadow-lg text-xs uppercase tracking-widest active:scale-95 transition-all">
+                                                    {isProcessingFiles ? "正在处理本地文件..." : isSyncing ? "正在同步保存..." : editingId ? "保存并修改数据" : "确认发布作品"}
                                                 </button>
                                                 {editingId && (
                                                     <button type="button" onClick={handleCancelEdit} className="w-full py-2 border border-zinc-200 text-zinc-400 font-bold rounded-xl text-[10px]">取消编辑</button>
@@ -885,14 +1163,15 @@
                             </div>
                         )}
 
-                        <div className="mb-12 md:mb-24 text-left animate-in fade-in duration-1000">
+                        {/* Gallery Header */}
+                        <div className="mb-12 md:mb-20 text-left animate-in fade-in duration-1000">
                             {config?.header?.headerImage && (
-                                <div className="w-full mb-8 md:mb-16 rounded-big overflow-hidden shadow-2xl max-h-[300px] md:max-h-[600px] border border-zinc-50">
+                                <div className="w-full mb-8 md:mb-16 rounded-3xl overflow-hidden shadow-2xl max-h-[300px] md:max-h-[500px] border border-zinc-100">
                                     <img src={config.header.headerImage} className="w-full h-full object-cover" />
                                 </div>
                             )}
-                            <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[10rem] font-black tracking-tighter leading-[0.9] md:leading-[0.82] mb-8 md:mb-16 text-zinc-900 text-left">
-                                {config?.header?.subtitle || 'MY WORK'}<br/><span className="text-zinc-100">{config?.header?.title || 'PORTFOLIO'}</span>
+                            <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[9rem] font-black tracking-tighter leading-[0.9] mb-8 md:mb-12 text-zinc-900 text-left">
+                                {config?.header?.subtitle || 'MY WORK'}<br/><span className="text-zinc-200">{config?.header?.title || 'PORTFOLIO'}</span>
                             </h1>
 
                             <div className="space-y-4 pt-6 pb-2 border-t border-zinc-100 max-w-3xl">
@@ -900,7 +1179,7 @@
                                     <span className="hidden md:flex text-[10px] font-black text-zinc-400 uppercase tracking-widest mr-4 items-center gap-1"><Icon name="tag" size={12}/> 分类：</span>
                                     <div className="flex overflow-x-auto py-2 no-scrollbar gap-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap w-screen md:w-auto">
                                         {categories.map(c => (
-                                            <button key={c.id} onClick={() => setActiveCategory(c.label)} className={`px-5 md:px-8 py-2 md:py-3 rounded-full border text-[10px] md:text-[11px] font-black uppercase transition-all shrink-0 ${activeCategory === c.label ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xl scale-105' : 'bg-transparent border-zinc-100 text-zinc-400 hover:border-zinc-300'}`}>{c.label}</button>
+                                            <button key={c.id} onClick={() => setActiveCategory(c.label)} className={`px-5 md:px-7 py-2 md:py-2.5 rounded-full border text-[10px] md:text-xs font-bold uppercase transition-all shrink-0 ${activeCategory === c.label ? 'bg-zinc-900 text-white border-zinc-900 shadow-xl scale-105' : 'bg-transparent border-zinc-200 text-zinc-500 hover:border-zinc-400'}`}>{c.label}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -909,51 +1188,84 @@
                                     <span className="hidden md:flex text-[10px] font-black text-zinc-400 uppercase tracking-widest mr-4 items-center gap-1"><Icon name="calendar" size={12}/> 年份：</span>
                                     <div className="flex overflow-x-auto py-2 no-scrollbar gap-2 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap w-screen md:w-auto">
                                         {availableYears.map(year => (
-                                            <button key={year} onClick={() => setActiveYear(year)} className={`px-5 md:px-8 py-2 md:py-3 rounded-full border text-[10px] md:text-[11px] font-black uppercase transition-all shrink-0 ${String(activeYear) === String(year) ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xl scale-105' : 'bg-transparent border-zinc-100 text-zinc-400 hover:border-zinc-300'}`}>{year === '全部' ? '全部年份' : `${year} 年`}</button>
+                                            <button key={year} onClick={() => setActiveYear(year)} className={`px-5 md:px-7 py-2 md:py-2.5 rounded-full border text-[10px] md:text-xs font-bold uppercase transition-all shrink-0 ${String(activeYear) === String(year) ? 'bg-zinc-900 text-white border-zinc-900 shadow-xl scale-105' : 'bg-transparent border-zinc-200 text-zinc-500 hover:border-zinc-400'}`}>{year === '全部' ? '全部年份' : `${year} 年`}</button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Waterfall Grid Gallery Items */}
                         <div className="gallery-columns space-y-4 md:space-y-8 text-left">
-                            {!isLoaded && <div className="col-span-full py-24 text-center font-bold text-zinc-300 animate-pulse tracking-widest uppercase">正在全速拉取极速画廊中...</div>}
+                            {!isLoaded && <div className="col-span-full py-24 text-center font-bold text-zinc-300 animate-pulse tracking-widest uppercase">正在拉取画廊数据中...</div>}
                             {isLoaded && displayProjects.map((project) => {
                                 const currentIdx = previewIndices[project.id] || 0;
                                 const images = (project.imgs && Array.isArray(project.imgs) && project.imgs.length > 0) ? project.imgs : [project.coverImage];
                                 const displayImg = images[currentIdx];
                                 const radius = config?.borderRadius ?? 16; 
-                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 8) : radius;
+                                const adjustedRadius = window.innerWidth < 640 ? Math.min(radius, 12) : radius;
 
                                 return (
-                                    <div key={project.id} style={{ borderRadius: `${adjustedRadius}px` }} className={`break-inside-avoid group relative bg-white border border-zinc-100 overflow-hidden transition-all duration-500 hover:shadow-2xl shadow-sm flex flex-col text-left mb-2 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-100 ring-offset-2' : 'opacity-100'}`}>
-                                        {accessToken && showAdminUI && (
-                                            <div className="absolute top-3 md:top-8 right-3 md:right-8 flex gap-1.5 md:gap-3 z-[99] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-2 md:group-hover:translate-y-0">
-                                                <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="arrow-up-circle" size={12}/></button>
-                                                <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 md:p-4 bg-white text-zinc-900 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100"><Icon name="edit-3" size={12}/></button>
-                                                <button title={project.isHidden ? "显示" : "隐藏"} onClick={() => toggleVisibility(project.id, project.isHidden)} className={`p-2 md:p-4 rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center border border-zinc-100 ${project.isHidden ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-900'}`}><Icon name={project.isHidden ? "eye-off" : "eye"} size={12}/></button>
-                                                <button title="永久删除" onClick={() => handleDeleteProject(project.id)} className="p-2 md:p-4 bg-red-600 text-white rounded-[0.8rem] md:rounded-[1.2rem] shadow-2xl hover:scale-110 flex items-center justify-center"><Icon name="trash-2" size={12}/></button>
+                                    <div key={project.id} style={{ borderRadius: `${adjustedRadius}px` }} className={`break-inside-avoid group relative bg-white border border-zinc-200/80 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:border-zinc-300 shadow-sm flex flex-col text-left mb-4 md:mb-8 ${project.isHidden ? 'opacity-40 grayscale ring-2 ring-zinc-200' : 'opacity-100'}`}>
+                                        {showAdminUI && (
+                                            <div className="absolute top-3 right-3 flex gap-1.5 z-30 opacity-100 transition-all">
+                                                <button title="置顶" onClick={() => setAsTop(project.id)} className="p-2 bg-white/90 backdrop-blur-md text-zinc-900 rounded-xl shadow-lg hover:scale-110 flex items-center justify-center border border-zinc-200"><Icon name="arrow-up-circle" size={14}/></button>
+                                                <button title="编辑作品" onClick={() => handleStartEdit(project)} className="p-2 bg-white/90 backdrop-blur-md text-zinc-900 rounded-xl shadow-lg hover:scale-110 flex items-center justify-center border border-zinc-200"><Icon name="edit-3" size={14}/></button>
+                                                <button title={project.isHidden ? "显示" : "隐藏"} onClick={() => toggleVisibility(project.id, project.isHidden)} className={`p-2 rounded-xl shadow-lg hover:scale-110 flex items-center justify-center border border-zinc-200 ${project.isHidden ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white/90 backdrop-blur-md text-zinc-900'}`}><Icon name={project.isHidden ? "eye-off" : "eye"} size={14}/></button>
+                                                <button title="永久删除" onClick={() => handleDeleteProject(project.id)} className="p-2 bg-red-600 text-white rounded-xl shadow-lg hover:scale-110 flex items-center justify-center"><Icon name="trash-2" size={14}/></button>
                                             </div>
                                         )}
 
-                                        <div style={{ borderTopLeftRadius: `${adjustedRadius}px`, borderTopRightRadius: `${adjustedRadius}px` }} className="relative w-full max-h-[300px] md:max-h-[600px] overflow-y-auto no-scrollbar bg-zinc-50">
-                                            <MediaRenderer videoUrl={project.videoUrl} coverImg={displayImg} watermarkText={config?.watermark} alt={project.title} className="w-full h-auto block select-none" />
+                                        {/* Main Media Block with Click to Lightbox */}
+                                        <div className="relative w-full overflow-hidden bg-zinc-50 border-b border-zinc-100">
+                                            <MediaRenderer 
+                                                videoUrl={project.videoUrl} 
+                                                coverImg={displayImg} 
+                                                watermarkText={config?.watermark} 
+                                                alt={project.title} 
+                                                className="w-full h-auto block" 
+                                                onClick={() => setActiveLightbox({ open: true, project, index: currentIdx })}
+                                            />
                                         </div>
 
-                                        <div className="p-2 md:p-10 text-left flex-1 flex flex-col justify-between">
+                                        {/* Project Detail Metadata */}
+                                        <div className="p-5 md:p-6 text-left flex-1 flex flex-col justify-between bg-white">
                                             <div>
-                                                <div className="flex items-start justify-between gap-1 mb-1 md:mb-4">
-                                                    <h3 className="text-xs md:text-2xl font-black leading-snug line-clamp-1" style={{ color: config?.titleColor || '#18181b' }}>{project.title}</h3>
-                                                    <span className="text-zinc-300 text-[8px] md:text-[10px] font-black shrink-0">{project.year}.{project.month}</span>
+                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[10px] font-bold tracking-wide">
+                                                        {project.type}
+                                                    </span>
+                                                    <span className="text-zinc-400 text-xs font-mono font-medium">{project.year}.{project.month}</span>
                                                 </div>
-                                                <p className="text-[9px] md:text-xs font-medium leading-relaxed line-clamp-2 text-left" style={{ color: config?.textColor || '#71717a' }}>{project.description}</p>
+                                                <h3 onClick={() => setActiveLightbox({ open: true, project, index: currentIdx })} className="text-base md:text-lg font-bold text-zinc-900 leading-snug line-clamp-2 cursor-pointer hover:text-zinc-600 transition-colors" style={{ color: config?.titleColor || '#18181b' }}>
+                                                    {project.title}
+                                                </h3>
+                                                {project.description && (
+                                                    <p className="text-xs text-zinc-500 font-normal leading-relaxed line-clamp-2 mt-2" style={{ color: config?.textColor || '#71717a' }}>
+                                                        {project.description}
+                                                    </p>
+                                                )}
                                             </div>
 
+                                            {/* Enhanced Thumbnail Strip */}
                                             {images.length > 1 && (
-                                                <div className="flex gap-1.5 overflow-x-auto pt-3 md:pt-6 no-scrollbar">
+                                                <div className="flex items-center gap-2 pt-4 mt-4 border-t border-zinc-100 overflow-x-auto no-scrollbar">
                                                     {images.map((img, idx) => (
-                                                        <div key={idx} onClick={()=>setPreviewIndices({...previewIndices, [project.id]: idx})} className={`w-6 h-6 md:w-12 md:h-12 rounded-md md:rounded-xl border flex-shrink-0 cursor-pointer transition-all duration-500 ${currentIdx === idx ? 'border-zinc-900 scale-105 shadow-md' : 'border-zinc-50 opacity-40 hover:opacity-100'}`}><img src={img} className="w-full h-full object-cover rounded-md md:rounded-xl" /></div>
+                                                        <button 
+                                                            key={idx} 
+                                                            onClick={() => setPreviewIndices({ ...previewIndices, [project.id]: idx })} 
+                                                            className={`w-10 h-10 md:w-12 md:h-12 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${currentIdx === idx ? 'border-zinc-900 scale-105 shadow-md' : 'border-zinc-100 opacity-50 hover:opacity-100'}`}
+                                                        >
+                                                            <img src={img} className="w-full h-full object-cover" />
+                                                        </button>
                                                     ))}
+                                                    <button 
+                                                        onClick={() => setActiveLightbox({ open: true, project, index: currentIdx })} 
+                                                        className="w-10 h-10 md:w-12 md:h-12 rounded-xl border border-dashed border-zinc-300 text-zinc-400 hover:text-zinc-900 hover:border-zinc-900 flex items-center justify-center shrink-0 text-xs font-bold transition-all"
+                                                        title="全屏放大查看"
+                                                    >
+                                                        +{images.length}
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -963,8 +1275,9 @@
                         </div>
                     </main>
 
-                    <footer className="py-24 px-10 border-t border-zinc-50 bg-white text-zinc-300 text-[8px] md:text-[10px] font-black tracking-[0.4em] uppercase text-center">
-                        <div>&copy; 2026 PORTFOLIO.LIVE — GITHUB DATABASE ACTIVE</div>
+                    {/* Footer */}
+                    <footer className="py-24 px-10 border-t border-zinc-100 bg-white text-zinc-400 text-[9px] md:text-xs font-bold tracking-[0.3em] uppercase text-center">
+                        <div>&copy; 2026 PORTFOLIO.LIVE — CREATIVE GALLERY</div>
                     </footer>
                 </div>
             );
