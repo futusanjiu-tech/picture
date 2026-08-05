@@ -22,13 +22,10 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .invisible-scroll-box { max-height: 85vh; overflow-y: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-        .invisible-scroll-box::-webkit-scrollbar { display: none; }
         .transition-all-fast { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .max-w-gallery { max-width: 1900px; margin-left: auto; margin-right: auto; }
-        .rounded-big { border-radius: 1.5rem; }
         
-        .gallery-columns { column-gap: 0.5rem; column-count: 2; }
+        .gallery-columns { column-gap: 0.75rem; column-count: 2; }
         @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
         @media (min-width: 1024px) { .gallery-columns { column-count: 4; } }
         @media (min-width: 1280px) { .gallery-columns { column-count: 5; } }
@@ -65,13 +62,13 @@
         const LOCAL_FALLBACK_PROJECTS = [
             {
                 id: 'local_demo',
-                title: '云端直连模式就绪',
-                description: '这是一个演示项目。请在顶部绑定 GitHub Token 以开启持久保存功能。',
+                title: '云端直连模式就绪 (已优化)',
+                description: '这是一个演示项目。代码已全面升级现代异步剪贴板API、增强Unicode Base64解析并防止大文件触发422。',
                 type: '3D作品',
                 year: 2026,
                 month: 8,
                 videoUrl: '',
-                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23f4f4f5"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="24" fill="%23a1a1aa" text-anchor="middle" dominant-baseline="middle">欢迎使用极速云端画廊</text></svg>',
+                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23f4f4f5"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="22" fill="%23a1a1aa" text-anchor="middle" dominant-baseline="middle">欢迎使用全新优化版画廊</text></svg>',
                 imgs: []
             }
         ];
@@ -95,7 +92,6 @@
                 case 'layout': return <svg {...svgProps}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>;
                 case 'plus': return <svg {...svgProps}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
                 case 'link': return <svg {...svgProps}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
-                case 'key': return <svg {...svgProps}><path d="M21 2l-2 2m-1.5 1.5l-3 3m-1.5 1.5l-3 3M3 21l3-3m0 0l2.5-2.5m-2.5 2.5L3 18m3 3l3-3"></path><circle cx="7.5" cy="7.5" r="4.5"></circle></svg>;
                 case 'alert-circle': return <svg {...svgProps}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
                 case 'check-circle': return <svg {...svgProps}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
                 default: return null;
@@ -126,7 +122,7 @@
                     if (src.startsWith('//')) src = 'https:' + src;
                     return (
                         <div className="aspect-video w-full rounded-t-2xl overflow-hidden bg-black">
-                            <iframe src={src} scrolling="no" border="0" frameBorder="0" frameSpacing="0" allowFullScreen={true} className="w-full h-full"></iframe>
+                            <iframe src={src} scrolling="no" frameBorder="0" allowFullScreen={true} className="w-full h-full"></iframe>
                         </div>
                     );
                 } else {
@@ -210,21 +206,30 @@
         };
 
         const b64EncodeUnicode = (str) => {
-            const bytes = new TextEncoder().encode(str);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) { 
-                binary += String.fromCharCode(bytes[i]); 
+            try {
+                const bytes = new TextEncoder().encode(str);
+                let binary = '';
+                for (let i = 0; i < bytes.byteLength; i++) { 
+                    binary += String.fromCharCode(bytes[i]); 
+                }
+                return btoa(binary);
+            } catch (err) {
+                return btoa(unescape(encodeURIComponent(str)));
             }
-            return btoa(binary);
         };
 
         const b64DecodeUnicode = (str) => {
-            const binary = atob(str);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) { 
-                bytes[i] = binary.charCodeAt(i); 
+            try {
+                const cleaned = str.replace(/\s/g, '');
+                const binary = atob(cleaned);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) { 
+                    bytes[i] = binary.charCodeAt(i); 
+                }
+                return new TextDecoder().decode(bytes);
+            } catch (err) {
+                return decodeURIComponent(escape(atob(str)));
             }
-            return new TextDecoder().decode(bytes);
         };
 
         const readFileAsDataURL = (file) => {
@@ -236,7 +241,7 @@
             });
         };
 
-        const processImageSafe = async (base64Str, maxWidth = 1000, quality = 0.65) => {
+        const processImageSafe = async (base64Str, maxWidth = 900, quality = 0.6) => {
             const perform = (src, w, q) => new Promise(res => {
                 const img = new Image(); 
                 img.src = src;
@@ -258,9 +263,9 @@
                 img.onerror = () => res(src);
             });
             let result = await perform(base64Str, maxWidth, quality);
-            while (result.length > 200000 && maxWidth > 300) {
-                maxWidth = Math.floor(maxWidth * 0.8); 
-                quality = Math.max(0.35, quality - 0.1); 
+            while (result.length > 150000 && maxWidth > 300) {
+                maxWidth = Math.floor(maxWidth * 0.75); 
+                quality = Math.max(0.3, quality - 0.1); 
                 result = await perform(base64Str, maxWidth, quality);
             }
             return result;
@@ -287,7 +292,6 @@
             const [isExpired, setIsExpired] = useState(false); 
             const [isDragOver, setIsDragOver] = useState(false);
 
-            // Modals & UI States
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
             const [shareModal, setShareModal] = useState(false); 
@@ -324,14 +328,13 @@
                 setConfirmModal({ show: true, title, onConfirm }); 
             };
 
-            const handleCopyToken = () => {
-                const t = document.createElement("textarea"); 
-                t.value = accessToken; 
-                document.body.appendChild(t); 
-                t.select(); 
-                document.execCommand('copy'); 
-                document.body.removeChild(t);
-                triggerToast("访问令牌已复制至剪贴板", "success");
+            const handleCopyToken = async () => {
+                try {
+                    await navigator.clipboard.writeText(accessToken);
+                    triggerToast("访问令牌已复制至剪贴板", "success");
+                } catch (err) {
+                    triggerToast("复制失败，请手动长按复制", "error");
+                }
             };
 
             useEffect(() => {
@@ -385,7 +388,7 @@
             const fetchShaOnly = async (own, rep, br, tok) => {
                 try {
                     const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } : {};
-                    const res = await fetch(`https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}_${Math.random()}`, { headers });
+                    const res = await fetch(`https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}`, { headers });
                     if (res.ok) {
                         const data = await res.json();
                         if (data.sha) { 
@@ -424,7 +427,7 @@
                             setFileSha(apiData.sha); 
                             localStorage.setItem('github_file_sha', apiData.sha); 
                         }
-                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content.replace(/\s/g, ''))));
+                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content)));
                         setIsLoaded(true); 
                         return;
                     } catch(e) {
@@ -456,7 +459,7 @@
                         if (apiData.sha) {
                             setFileSha(apiData.sha);
                         }
-                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content.replace(/\s/g, '')))); 
+                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content))); 
                         setIsLoaded(true); 
                         return;
                     }
@@ -475,7 +478,7 @@
 
             const saveDataToGitHub = async (updatedConfig, updatedCats, updatedProjs) => {
                 if (!accessToken || !accessToken.trim()) { 
-                    throw new Error("⚠️ 未配置 GitHub Token！无法提交更改到云端，刷新后数据会丢失。请在顶部“配置 Token”处填写凭据。"); 
+                    throw new Error("⚠️ 未配置 GitHub Token！无法提交更改到云端。请在顶部“配置 Token”处填写凭据。"); 
                 }
 
                 setIsSyncing(true);
@@ -492,6 +495,8 @@
                     const base64Content = b64EncodeUnicode(JSON.stringify(commitData));
                     
                     let sha = fileSha || localStorage.getItem('github_file_sha') || '';
+                    
+                    // 尝试预先获取远程文件 SHA，如果文件不存在（404）则清空 sha 以便新建文件
                     try {
                         const shaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}&t=${Date.now()}`, { 
                             headers: { 
@@ -504,17 +509,24 @@
                             sha = shaData.sha;
                             setFileSha(sha);
                             localStorage.setItem('github_file_sha', sha);
-                        } else if (shaRes.status === 404) { 
-                            sha = ''; 
+                        } else {
+                            // 无论是 404 还是其他情况，只要不存在就重置 sha，允许新建
+                            sha = '';
+                            setFileSha('');
+                            localStorage.removeItem('github_file_sha');
                         }
-                    } catch(shaErr) {}
+                    } catch(shaErr) {
+                        sha = '';
+                    }
 
                     const payload = { 
                         content: base64Content, 
                         message: `Update via PRO.FOLIO App [${new Date().toLocaleString()}]`, 
                         branch: branch
                     };
-                    if (sha) {
+                    
+                    // 只有当确定文件存在且有 sha 时才传入 sha 字段，新建文件时不要传 sha 字段
+                    if (sha && sha.trim() !== '') {
                         payload.sha = sha;
                     }
 
@@ -536,9 +548,9 @@
                         }
                     } else {
                         const errBody = await res.json().catch(() => ({}));
-                        if (res.status === 401) throw new Error("Token 无效或已过期，请重新填写 Token");
-                        else if (res.status === 403) throw new Error("Token 权限不足，创建 Token 时请勾选 repo 读写权限");
-                        else if (res.status === 422) throw new Error("图片体积超出限制，请尽量上传小图或填入图片网络链接");
+                        if (res.status === 401) throw new Error("Token 无效或已过期，请检查 Token 字符串");
+                        else if (res.status === 403) throw new Error("Token 权限不足，请确保勾选了 repo 的读写权限");
+                        else if (res.status === 422) throw new Error("提交体积过大(422)，请尝试减少单次上传的图片数量或压缩图片");
                         else throw new Error(errBody.message || `GitHub 拒绝保存 (状态码: ${res.status})`);
                     }
                 } catch (e) { 
@@ -578,12 +590,12 @@
                         const file = fileList[i];
                         if (file.type.startsWith('image/')) {
                             const rawData = await readFileAsDataURL(file);
-                            const compressed = await processImageSafe(rawData, 1000, 0.65);
+                            const compressed = await processImageSafe(rawData, 900, 0.6);
                             newImages.push(compressed);
                         }
                     }
                     setForm(prev => ({ ...prev, images: newImages }));
-                    triggerToast(`已解析 ${fileList.length} 张本地图片`, "success");
+                    triggerToast(`已解析并压缩 ${fileList.length} 张本地图片`, "success");
                 } catch (err) {
                     triggerToast(`读取图片失败: ${err.message}`, "error");
                 } finally {
@@ -655,7 +667,6 @@
                         ? projects.map(p => p.id === editingId ? newProj : p) 
                         : [newProj, ...projects];
 
-                    // 必须真正写入云端成功后，才更新界面列表
                     await saveDataToGitHub(config, categories, newProjectsList);
                     setProjects(newProjectsList);
                     triggerToast(editingId ? "✅ 作品已更新并写入 GitHub 云端！" : "🎉 成功发布新作品并永久写入 GitHub！", "success");
@@ -695,7 +706,7 @@
 
             const handleDeleteProject = (projectId) => {
                 if (!accessToken) return triggerToast("❌ 无法删除！请先在顶部配置 GitHub Token。", "error");
-                triggerConfirm('确认要永久从 GitHub 仓库中删除此作品吗？刷新后将无法恢复。', async () => {
+                triggerConfirm('确认要永久从 GitHub 仓库中删除此作品吗？', async () => {
                     const nextProjs = projects.filter(p => p.id !== projectId);
                     try { 
                         await saveDataToGitHub(config, categories, nextProjs); 
@@ -742,7 +753,7 @@
                 if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
                 const reader = new FileReader();
                 reader.onloadend = async () => {
-                    const safeHeader = await processImageSafe(reader.result, 1400, 0.6);
+                    const safeHeader = await processImageSafe(reader.result, 1200, 0.6);
                     const newConfig = { ...config, header: { ...config.header, headerImage: safeHeader } };
                     try { 
                         await saveDataToGitHub(newConfig, categories, projects); 
@@ -755,18 +766,17 @@
                 reader.readAsDataURL(file);
             };
 
-            const handleCopyShareLink = (days) => {
+            const handleCopyShareLink = async (days) => {
                 let link = `${window.location.origin}${window.location.pathname}?owner=${owner}&repo=${repo}&branch=${branch}`;
                 if (days > 0) { 
                     link += `&expire=${Date.now() + days * 24 * 60 * 60 * 1000}`; 
                 }
-                const t = document.createElement("textarea"); 
-                t.value = link; 
-                document.body.appendChild(t); 
-                t.select(); 
-                document.execCommand('copy'); 
-                document.body.removeChild(t);
-                triggerToast(days > 0 ? `限时 ${days} 天链接已复制！` : '永久链接已复制！', 'success');
+                try {
+                    await navigator.clipboard.writeText(link);
+                    triggerToast(days > 0 ? `限时 ${days} 天链接已复制！` : '永久链接已复制！', 'success');
+                } catch(err) {
+                    triggerToast("复制分享链接失败", "error");
+                }
                 setShareModal(false);
             };
 
@@ -807,7 +817,7 @@
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 4：GitHub 访问令牌 (Token - 必填项以保持同步)</label>
-                                        <input name="gToken" type="password" defaultValue={loginToken} placeholder="ghp_ 开头（必填，确保数据永久写入）" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
+                                        <input name="gToken" type="password" defaultValue={loginToken} placeholder="ghp_ 开头（确保数据永久写入）" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                 </div>
                                 <button type="submit" className="w-full py-5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg shadow-slate-100 transition-all">绑定并开启画廊空间</button>
@@ -871,7 +881,7 @@
                                 <p className="text-[10px] font-bold text-zinc-400 mb-6 uppercase">请选择链接的有效时长</p>
                                 <div className="space-y-3 mb-6">
                                     <button onClick={() => handleCopyShareLink(0)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>永久有效</span> <span className="text-[10px] text-zinc-400 font-bold">无限制</span></button>
-                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期项目提案</span></button>
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期提案</span></button>
                                     <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center"><span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">高安全性</span></button>
                                 </div>
                                 <button onClick={() => setShareModal(false)} className="py-3 px-6 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
@@ -916,7 +926,7 @@
                                             </div>
                                             <div>
                                                 <h4 className="text-sm font-black text-red-100">⚠️ 未绑定 GitHub 写入 Token（当前所有修改刷新即消失！）</h4>
-                                                <p className="text-xs text-red-200/70">GitHub Pages 是静态网站，必须在此填入 Token 才能把图片和删改操作存入云端。</p>
+                                                <p className="text-xs text-red-200/70">GitHub Pages 是静态网站，必须在此填入 Token 才能把图片和修改存入云端。</p>
                                             </div>
                                         </div>
                                         <form onSubmit={(e) => {
@@ -955,7 +965,7 @@
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-                                    {/* Preference & Category Customization Panel */}
+                                    {/* Preference Customization Panel */}
                                     <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-2"><Icon name="layout" size={14}/> 主页偏好定制</h4>
                                         <div className="space-y-4">
@@ -1082,7 +1092,7 @@
                                                     </div>
                                                     <div>
                                                         <p className="text-xs font-bold text-zinc-700">点击选择本地图片 或 将图片拖拽至此</p>
-                                                        <p className="text-[9px] text-zinc-400 font-medium">支持多图选中（高保真压缩）</p>
+                                                        <p className="text-[9px] text-zinc-400 font-medium">支持多图选中（自动高保真压缩防422）</p>
                                                     </div>
                                                     <input 
                                                         type="file" 
