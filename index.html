@@ -54,6 +54,7 @@
         const LOCAL_FALLBACK_CONFIG = {
             header: { title: 'MY CREATIVE WORK', subtitle: 'PRO.PORTFOLIO', headerImage: '', headerImages: [] },
             watermark: '© COPY PROTECTION',
+            watermarkFontSize: 24,
             borderRadius: 16,
             titleColor: '#18181b',
             textColor: '#71717a'
@@ -98,12 +99,12 @@
             }
         };
 
-        const WatermarkedDisplay = ({ src, watermarkText, alt, className }) => {
+        const WatermarkedDisplay = ({ src, watermarkText, watermarkFontSize = 24, alt, className }) => {
             return (
                 <div className="relative inline-block w-full h-full select-none">
                     <img src={src} alt={alt} loading="lazy" className={`${className} block w-full h-auto`} />
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                        <span className="text-white/35 font-bold text-xl md:text-3xl rotate-[-15deg] whitespace-nowrap">
+                        <span style={{ fontSize: `${watermarkFontSize}px` }} className="text-white/35 font-bold rotate-[-15deg] whitespace-nowrap leading-none">
                             {watermarkText || "PORTFOLIO"}
                         </span>
                     </div>
@@ -111,7 +112,7 @@
             );
         };
 
-        const MediaRenderer = ({ videoUrl, coverImg, watermarkText, alt, className, onClick }) => {
+        const MediaRenderer = ({ videoUrl, coverImg, watermarkText, watermarkFontSize, alt, className, onClick }) => {
             if (videoUrl && videoUrl.trim() !== '') {
                 if (videoUrl.includes('<iframe') || videoUrl.includes('player.bilibili.com') || videoUrl.includes('iframe')) {
                     let src = videoUrl;
@@ -133,7 +134,7 @@
             }
             return (
                 <div onClick={onClick} className="cursor-pointer group relative overflow-hidden">
-                    <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} alt={alt} className={`${className} group-hover:scale-[1.02] transition-transform duration-500`} />
+                    <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} watermarkFontSize={watermarkFontSize} alt={alt} className={`${className} group-hover:scale-[1.02] transition-transform duration-500`} />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-zinc-900 text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur-md transform translate-y-2 group-hover:translate-y-0 transition-all flex items-center gap-1.5">
                             <Icon name="eye" size={14} /> 全屏预览
@@ -143,7 +144,7 @@
             );
         };
 
-        const LightboxModal = ({ project, initialIndex = 0, watermark, onClose }) => {
+        const LightboxModal = ({ project, initialIndex = 0, watermark, watermarkFontSize, onClose }) => {
             if (!project) return null;
             const images = (project.imgs && project.imgs.length > 0) ? project.imgs : [project.coverImage];
             const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -179,9 +180,9 @@
                         
                         <div className="max-w-full max-h-[78vh] flex items-center justify-center">
                             {project.videoUrl ? (
-                                <MediaRenderer videoUrl={project.videoUrl} coverImg={images[currentIndex]} watermarkText={watermark} alt={project.title} className="max-h-[75vh] w-auto rounded-2xl object-contain" />
+                                <MediaRenderer videoUrl={project.videoUrl} coverImg={images[currentIndex]} watermarkText={watermark} watermarkFontSize={watermarkFontSize} alt={project.title} className="max-h-[75vh] w-auto rounded-2xl object-contain" />
                             ) : (
-                                <WatermarkedDisplay src={images[currentIndex]} watermarkText={watermark} alt={project.title} className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl" />
+                                <WatermarkedDisplay src={images[currentIndex]} watermarkText={watermark} watermarkFontSize={watermarkFontSize} alt={project.title} className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl" />
                             )}
                         </div>
 
@@ -976,6 +977,14 @@
                                                 <input value={config?.header?.subtitle || ''} onChange={e=>{const c={...config, header:{...config.header, subtitle:e.target.value}}; setConfig(c); }} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs" />
                                             </div>
                                             <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">防盗水印文字内容</label>
+                                                <input value={config?.watermark || ''} onChange={e=>{const c={...config, watermark:e.target.value}; setConfig(c); }} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs font-bold" placeholder="例如：© COPY PROTECTION" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">水印文字大小 ({config?.watermarkFontSize ?? 24}px)</label>
+                                                <input type="range" min="12" max="72" value={config?.watermarkFontSize ?? 24} onChange={e=>{const val = parseInt(e.target.value); const c = { ...config, watermarkFontSize: val }; setConfig(c); }} className="w-full accent-zinc-950" />
+                                            </div>
+                                            <div className="space-y-1">
                                                 <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">卡片自定义圆角 ({config?.borderRadius ?? 16}px)</label>
                                                 <input type="range" min="0" max="40" value={config?.borderRadius ?? 16} onChange={e=>{const val = parseInt(e.target.value); const c = { ...config, borderRadius: val }; setConfig(c); }} className="w-full accent-zinc-950" />
                                             </div>
@@ -1185,7 +1194,7 @@
                                             className="w-full h-[260px] sm:h-[380px] md:h-[500px] cursor-pointer"
                                             onClick={() => setActiveLightbox({ open: true, project: { title: config?.header?.title || '个人介绍', type: 'INTRO', year: 'PRO', month: 'FOLIO', imgs: headerImgs }, index: activeHeaderImgIdx })}
                                         >
-                                            <WatermarkedDisplay src={currentHeaderImg} watermarkText={config?.watermark} alt="Header Banner" className="w-full h-full object-cover" />
+                                            <WatermarkedDisplay src={currentHeaderImg} watermarkText={config?.watermark} watermarkFontSize={config?.watermarkFontSize || 24} alt="Header Banner" className="w-full h-full object-cover" />
                                         </div>
 
                                         {headerImgs.length > 1 && (
@@ -1270,6 +1279,7 @@
                                                 videoUrl={project.videoUrl} 
                                                 coverImg={displayImg} 
                                                 watermarkText={config?.watermark} 
+                                                watermarkFontSize={config?.watermarkFontSize || 24}
                                                 alt={project.title} 
                                                 className="w-full h-auto block" 
                                                 onClick={() => setActiveLightbox({ open: true, project, index: currentIdx })}
@@ -1361,6 +1371,7 @@
                             project={activeLightbox.project} 
                             initialIndex={activeLightbox.index} 
                             watermark={config?.watermark} 
+                            watermarkFontSize={config?.watermarkFontSize || 24}
                             onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })} 
                         />
                     )}
