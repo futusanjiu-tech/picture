@@ -144,11 +144,12 @@
                         className="overflow-y-auto no-scrollbar relative"
                     >
                         <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} watermarkFontSize={watermarkFontSize} alt={alt} className={`${className} group-hover:scale-[1.01] transition-transform duration-500`} />
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10">
-                            <span className="bg-zinc-900/90 text-white text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-xl backdrop-blur-md flex items-center gap-1.5 whitespace-nowrap">
-                                <Icon name="eye" size={13} /> 点击放大 / 滚动查看长图
-                            </span>
-                        </div>
+                    </div>
+                    {/* 固定底部的白色半透明玻璃质感提示条 */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-10">
+                        <span className="bg-white/80 text-zinc-900 text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md border border-white/60 flex items-center gap-1.5 whitespace-nowrap">
+                            <Icon name="eye" size={13} className="text-zinc-700" /> 点击放大 / 滚动查看长图
+                        </span>
                     </div>
                 </div>
             );
