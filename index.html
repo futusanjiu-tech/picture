@@ -52,7 +52,7 @@
         ];
 
         const LOCAL_FALLBACK_CONFIG = {
-            header: { title: 'MY CREATIVE WORK', subtitle: 'PRO.PORTFOLIO', headerImage: '' },
+            header: { title: 'MY CREATIVE WORK', subtitle: 'PRO.PORTFOLIO', headerImage: '', headerImages: [] },
             watermark: '© COPY PROTECTION',
             borderRadius: 16,
             titleColor: '#18181b',
@@ -316,6 +316,7 @@
             });
             
             const [previewIndices, setPreviewIndices] = useState({});
+            const [activeHeaderImgIdx, setActiveHeaderImgIdx] = useState(0);
             const headerFileInputRef = useRef(null);
             const localProjectFileInputRef = useRef(null);
 
@@ -343,6 +344,7 @@
                 const urlRepo = params.get('repo'); 
                 const urlBranch = params.get('branch') || 'main'; 
                 const urlExpire = params.get('expire'); 
+                const urlAdmin = params.get('admin');
 
                 if (urlExpire) {
                     if (Date.now() > parseInt(urlExpire, 10)) {
@@ -358,10 +360,12 @@
                 const cachedRepo = localStorage.getItem('gh_portfolio_repo') || '';
                 const cachedToken = localStorage.getItem('gh_portfolio_token') || '';
 
-                if (cachedToken) { 
-                    setAccessToken(cachedToken); 
+                if (cachedToken || urlAdmin === '1' || urlAdmin === 'true') { 
                     setIsAdminMode(true); 
-                    setShowAdminUI(true); 
+                    if (cachedToken) {
+                        setAccessToken(cachedToken); 
+                        setShowAdminUI(true); 
+                    }
                 }
 
                 const effectiveOwner = urlOwner || cachedOwner;
@@ -465,7 +469,7 @@
                     }
                 } catch(e) { 
                     triggerToast("已进入展示视图", "info"); 
-                } finally { 
+                } fontFinally: { 
                     setIsLoaded(true); 
                 }
             };
@@ -496,7 +500,6 @@
                     
                     let sha = fileSha || localStorage.getItem('github_file_sha') || '';
                     
-                    // 尝试预先获取远程文件 SHA，如果文件不存在（404）则清空 sha 以便新建文件
                     try {
                         const shaRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}&t=${Date.now()}`, { 
                             headers: { 
@@ -510,7 +513,6 @@
                             setFileSha(sha);
                             localStorage.setItem('github_file_sha', sha);
                         } else {
-                            // 无论是 404 还是其他情况，只要不存在就重置 sha，允许新建
                             sha = '';
                             setFileSha('');
                             localStorage.removeItem('github_file_sha');
@@ -525,7 +527,6 @@
                         branch: branch
                     };
                     
-                    // 只有当确定文件存在且有 sha 时才传入 sha 字段，新建文件时不要传 sha 字段
                     if (sha && sha.trim() !== '') {
                         payload.sha = sha;
                     }
@@ -747,23 +748,70 @@
                 });
             };
 
-            const handleHeaderUpload = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+            const handleHeaderUpload = async (e) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
                 if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                    const safeHeader = await processImageSafe(reader.result, 1200, 0.6);
-                    const newConfig = { ...config, header: { ...config.header, headerImage: safeHeader } };
-                    try { 
-                        await saveDataToGitHub(newConfig, categories, projects); 
-                        setConfig(newConfig); 
-                        triggerToast("封面背景已更新并写回云端", "success"); 
-                    } catch (err) { 
-                        triggerToast(`更新封面失败: ${err.message}`, "error"); 
+                
+                setIsProcessingFiles(true);
+                try {
+                    const existingImgs = config?.header?.headerImages && config.header.headerImages.length > 0
+                        ? [...config.header.headerImages]
+                        : (config?.header?.headerImage ? [config.header.headerImage] : []);
+
+                    const newImgs = [...existingImgs];
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (file.type.startsWith('image/')) {
+                            const rawData = await readFileAsDataURL(file);
+                            const safeHeader = await processImageSafe(rawData, 1200, 0.6);
+                            newImgs.push(safeHeader);
+                        }
+                    }
+
+                    const newConfig = { 
+                        ...config, 
+                        header: { 
+                            ...config.header, 
+                            headerImage: newImgs[0] || '',
+                            headerImages: newImgs 
+                        } 
+                    };
+
+                    await saveDataToGitHub(newConfig, categories, projects); 
+                    setConfig(newConfig); 
+                    triggerToast(`已添加 ${files.length} 张图片到主页介绍区`, "success"); 
+                } catch (err) { 
+                    triggerToast(`上传图片失败: ${err.message}`, "error"); 
+                } finally {
+                    setIsProcessingFiles(false);
+                    if (e.target) e.target.value = '';
+                }
+            };
+
+            const handleRemoveHeaderImage = async (idxToRemove) => {
+                if (!accessToken) return triggerToast("❌ 请先配置 GitHub Token！", "error");
+                const existingImgs = config?.header?.headerImages && config.header.headerImages.length > 0
+                    ? [...config.header.headerImages]
+                    : (config?.header?.headerImage ? [config.header.headerImage] : []);
+                
+                const nextImgs = existingImgs.filter((_, idx) => idx !== idxToRemove);
+                const newConfig = {
+                    ...config,
+                    header: {
+                        ...config.header,
+                        headerImage: nextImgs[0] || '',
+                        headerImages: nextImgs
                     }
                 };
-                reader.readAsDataURL(file);
+
+                try {
+                    await saveDataToGitHub(newConfig, categories, projects);
+                    setConfig(newConfig);
+                    triggerToast("已移除选中介绍图", "success");
+                } catch (err) {
+                    triggerToast(`移除失败: ${err.message}`, "error");
+                }
             };
 
             const handleCopyShareLink = async (days) => {
@@ -829,17 +877,15 @@
 
             if (isExpired) {
                 return (
-                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-700">
-                        <div className="w-full max-w-md bg-white rounded-3xl p-10 md:p-12 shadow-xl border border-slate-100 text-center">
-                            <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-8 text-zinc-400 border-4 border-white shadow-md">
-                                <Icon name="clock" size={32} />
-                            </div>
-                            <h2 className="text-2xl font-black mb-3">链接已过期</h2>
-                            <p className="text-xs font-bold text-slate-400 mb-10 leading-relaxed">
-                                该空间分享链接已超过设定的访问时效，<br/>为了保护创作者权益，内容现已自动隐藏。
-                            </p>
+                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
+                        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-md w-full border border-slate-100">
+                            <div className="w-14 h-14 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 font-black text-2xl">!</div>
+                            <h2 className="text-2xl font-black mb-2 text-zinc-900">分享链接已过期</h2>
+                            <p className="text-xs text-zinc-500 mb-6 leading-relaxed">此画廊临时访问链接已超过有效期限。请联系管理员重新获取最新的访问链接。</p>
                             {accessToken && (
-                                <button onClick={() => window.location.href = window.location.pathname} className="w-full py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm uppercase shadow-lg transition-all">返回管理后台</button>
+                                <button onClick={() => setIsExpired(false)} className="w-full py-3 bg-zinc-950 text-white font-bold text-xs rounded-xl shadow-lg">
+                                    继续以管理员身份访问
+                                </button>
                             )}
                         </div>
                     </div>
@@ -847,68 +893,20 @@
             }
 
             return (
-                <div className="min-h-screen bg-white text-zinc-900">
-                    {isSyncing && (
-                        <div className="fixed inset-0 z-[1000] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
-                            <div className="w-12 h-12 border-4 border-zinc-200 border-t-zinc-950 rounded-full animate-spin"></div>
-                            <p className="text-xs font-black uppercase tracking-widest text-zinc-900">正在加密将数据保存写入 GitHub 云端...</p>
-                        </div>
-                    )}
-
-                    {toast.show && (
-                        <div className={`fixed top-8 left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-[1000] text-white rounded-full py-4 px-8 shadow-2xl flex items-center justify-center gap-3 animate-in slide-in-from-top-6 duration-300 ${toast.type === 'error' ? 'bg-red-600' : toast.type === 'success' ? 'bg-emerald-600' : 'bg-zinc-950'}`}>
-                            <span className="text-xs font-bold leading-none text-center">{toast.message}</span>
-                        </div>
-                    )}
-
-                    {confirmModal.show && (
-                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
-                            <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
-                                <h3 className="text-sm font-black mb-6 text-zinc-900 leading-relaxed">{confirmModal.title}</h3>
-                                <div className="flex gap-4">
-                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
-                                    <button onClick={() => { confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-full text-xs font-black shadow-lg hover:bg-red-700">确认删除</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {shareModal && (
-                        <div className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200">
-                            <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center">
-                                <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-900"><Icon name="share-2" size={20} /></div>
-                                <h3 className="text-lg font-black mb-1 text-zinc-900">分享空间地址</h3>
-                                <p className="text-[10px] font-bold text-zinc-400 mb-6 uppercase">请选择链接的有效时长</p>
-                                <div className="space-y-3 mb-6">
-                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>永久有效</span> <span className="text-[10px] text-zinc-400 font-bold">无限制</span></button>
-                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-4 border border-zinc-200 hover:border-zinc-400 rounded-2xl text-sm font-black transition-all flex justify-between px-6 items-center"><span>7天后过期</span> <span className="text-[10px] text-orange-400 font-bold">短期提案</span></button>
-                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-4 bg-zinc-950 text-white rounded-2xl text-sm font-black shadow-lg hover:scale-[1.02] transition-all flex justify-between px-6 items-center"><span>1天后过期</span> <span className="text-[10px] text-zinc-400 font-bold">高安全性</span></button>
-                                </div>
-                                <button onClick={() => setShareModal(false)} className="py-3 px-6 bg-zinc-100 rounded-full text-xs font-bold text-zinc-500 hover:bg-zinc-200">取消</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeLightbox.open && (
-                        <LightboxModal 
-                            project={activeLightbox.project} 
-                            initialIndex={activeLightbox.index} 
-                            watermark={config?.watermark} 
-                            onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })} 
-                        />
-                    )}
-
+                <div className="min-h-screen bg-white font-sans selection:bg-zinc-900 selection:text-white">
                     {/* Navigation Bar */}
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 md:px-10 h-16 md:h-20 flex items-center justify-between">
                         <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => window.location.href='/'}>PORTFOLIO.LIVE</div>
                         <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => setShowAdminUI(!showAdminUI)} 
-                                className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
-                            >
-                                <Icon name={showAdminUI ? "eye" : "edit-3"} size={14} />
-                                {showAdminUI ? '画廊预览模式' : '管理与创作后台'}
-                            </button>
+                            {isAdminMode && (
+                                <button 
+                                    onClick={() => setShowAdminUI(!showAdminUI)} 
+                                    className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                                >
+                                    <Icon name={showAdminUI ? "eye" : "edit-3"} size={14} />
+                                    {showAdminUI ? '画廊预览模式' : '管理与创作后台'}
+                                </button>
+                            )}
                         </div>
                     </nav>
 
@@ -981,12 +979,33 @@
                                                 <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">卡片自定义圆角 ({config?.borderRadius ?? 16}px)</label>
                                                 <input type="range" min="0" max="40" value={config?.borderRadius ?? 16} onChange={e=>{const val = parseInt(e.target.value); const c = { ...config, borderRadius: val }; setConfig(c); }} className="w-full accent-zinc-950" />
                                             </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">主页大图封面</label>
-                                                <div onClick={() => headerFileInputRef.current.click()} className="w-full py-3 border-2 border-dashed border-zinc-200 rounded-xl flex items-center justify-center gap-2 text-zinc-400 text-xs font-bold cursor-pointer hover:bg-zinc-100 transition-colors">
-                                                    <Icon name="image" size={12}/> {config?.header?.headerImage ? '更新当前封面' : '上传封面背景'}
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">主页多图/个人介绍图片管理</label>
+                                                <div onClick={() => headerFileInputRef.current.click()} className="w-full py-3 border-2 border-dashed border-zinc-200 rounded-xl flex items-center justify-center gap-2 text-zinc-500 text-xs font-bold cursor-pointer hover:bg-zinc-100 transition-colors">
+                                                    <Icon name="upload" size={14}/> 上传介绍图 / 封面图 (支持多选)
                                                 </div>
-                                                <input type="file" ref={headerFileInputRef} onChange={handleHeaderUpload} className="hidden" accept="image/*" />
+                                                <input type="file" ref={headerFileInputRef} onChange={handleHeaderUpload} multiple className="hidden" accept="image/*" />
+
+                                                {/* Header Images Preview Grid */}
+                                                {((config?.header?.headerImages && config.header.headerImages.length > 0) || config?.header?.headerImage) && (
+                                                    <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
+                                                        {(config?.header?.headerImages && config.header.headerImages.length > 0 
+                                                            ? config.header.headerImages 
+                                                            : [config.header.headerImage]
+                                                        ).map((img, idx) => (
+                                                            <div key={idx} className="relative group shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-zinc-200 shadow-sm">
+                                                                <img src={img} className="w-full h-full object-cover" />
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => handleRemoveHeaderImage(idx)} 
+                                                                    className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Icon name="x" size={12} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {accessToken && (
@@ -1149,13 +1168,56 @@
                             </div>
                         )}
 
-                        {/* Gallery Header */}
+                        {/* Gallery Header Banner */}
                         <div className="mb-12 md:mb-20 text-left animate-in fade-in duration-1000">
-                            {config?.header?.headerImage && (
-                                <div className="w-full mb-8 md:mb-16 rounded-3xl overflow-hidden shadow-2xl max-h-[300px] md:max-h-[500px] border border-zinc-100">
-                                    <img src={config.header.headerImage} className="w-full h-full object-cover" />
-                                </div>
-                            )}
+                            {(() => {
+                                const headerImgs = (config?.header?.headerImages && config.header.headerImages.length > 0) 
+                                    ? config.header.headerImages 
+                                    : (config?.header?.headerImage ? [config.header.headerImage] : []);
+                                
+                                if (headerImgs.length === 0) return null;
+
+                                const currentHeaderImg = headerImgs[activeHeaderImgIdx] || headerImgs[0];
+
+                                return (
+                                    <div className="w-full mb-8 md:mb-16 rounded-3xl overflow-hidden shadow-2xl border border-zinc-100 bg-zinc-900 relative group">
+                                        <div 
+                                            className="w-full h-[260px] sm:h-[380px] md:h-[500px] cursor-pointer"
+                                            onClick={() => setActiveLightbox({ open: true, project: { title: config?.header?.title || '个人介绍', type: 'INTRO', year: 'PRO', month: 'FOLIO', imgs: headerImgs }, index: activeHeaderImgIdx })}
+                                        >
+                                            <WatermarkedDisplay src={currentHeaderImg} watermarkText={config?.watermark} alt="Header Banner" className="w-full h-full object-cover" />
+                                        </div>
+
+                                        {headerImgs.length > 1 && (
+                                            <>
+                                                <button 
+                                                    onClick={() => setActiveHeaderImgIdx(prev => (prev - 1 + headerImgs.length) % headerImgs.length)} 
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    ‹
+                                                </button>
+                                                <button 
+                                                    onClick={() => setActiveHeaderImgIdx(prev => (prev + 1) % headerImgs.length)} 
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    ›
+                                                </button>
+
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-black/50 backdrop-blur-md rounded-full">
+                                                    {headerImgs.map((img, idx) => (
+                                                        <button 
+                                                            key={idx} 
+                                                            onClick={() => setActiveHeaderImgIdx(idx)} 
+                                                            className={`w-2.5 h-2.5 rounded-full transition-all ${activeHeaderImgIdx === idx ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/80'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[9rem] font-black tracking-tighter leading-[0.9] mb-8 md:mb-12 text-zinc-900 text-left">
                                 {config?.header?.subtitle || 'MY WORK'}<br/><span className="text-zinc-200">{config?.header?.title || 'PORTFOLIO'}</span>
                             </h1>
@@ -1262,9 +1324,69 @@
                     </main>
 
                     {/* Footer */}
-                    <footer className="py-24 px-10 border-t border-zinc-100 bg-white text-zinc-400 text-[9px] md:text-xs font-bold tracking-[0.3em] uppercase text-center">
+                    <footer className="py-24 px-10 border-t border-zinc-100 bg-white text-zinc-400 text-[9px] md:text-xs font-bold tracking-[0.3em] uppercase text-center flex flex-col items-center gap-3">
                         <div>&copy; 2026 PORTFOLIO.LIVE — CREATIVE GALLERY</div>
+                        {!isAdminMode && (
+                            <button 
+                                onClick={() => { setIsAdminMode(true); setShowAdminUI(true); }} 
+                                className="text-zinc-300 hover:text-zinc-600 transition-colors text-[9px] tracking-normal font-normal lowercase"
+                            >
+                                站长登录后台
+                            </button>
+                        )}
                     </footer>
+
+                    {/* Modals & Overlay Components */}
+                    {/* Share Link Modal */}
+                    {shareModal && (
+                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 text-left shadow-2xl animate-in zoom-in-95 duration-150">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-black text-lg text-zinc-900">分享此画廊</h3>
+                                    <button onClick={() => setShareModal(false)} className="p-2 text-zinc-400 hover:text-zinc-900"><Icon name="x" size={18}/></button>
+                                </div>
+                                <p className="text-xs text-zinc-500">选择生成永久分享链接或设置限制有效期的快捷链接：</p>
+                                <div className="space-y-2">
+                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3 bg-zinc-950 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors">生成永久访问链接</button>
+                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-3 bg-zinc-100 text-zinc-800 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">生成 1 天效期访问链接</button>
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3 bg-zinc-100 text-zinc-800 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-colors">生成 7 天效期访问链接</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Lightbox Modal */}
+                    {activeLightbox.open && (
+                        <LightboxModal 
+                            project={activeLightbox.project} 
+                            initialIndex={activeLightbox.index} 
+                            watermark={config?.watermark} 
+                            onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })} 
+                        />
+                    )}
+
+                    {/* Confirmation Modal */}
+                    {confirmModal.show && (
+                        <div className="fixed inset-0 z-[4000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-8 max-w-sm w-full space-y-6 text-left shadow-2xl animate-in zoom-in-95 duration-150">
+                                <h3 className="font-black text-lg text-zinc-900">{confirmModal.title}</h3>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 border border-zinc-200 text-zinc-600 rounded-xl text-xs font-bold">取消</button>
+                                    <button onClick={() => { if (confirmModal.onConfirm) confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-xs font-bold">确认删除</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Toast Notification Container */}
+                    {toast.show && (
+                        <div className="fixed bottom-6 right-6 z-[5000] animate-in slide-in-from-bottom-5 duration-300">
+                            <div className={`px-5 py-3.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 text-white ${toast.type === 'error' ? 'bg-red-600' : toast.type === 'success' ? 'bg-zinc-950' : 'bg-zinc-800'}`}>
+                                <Icon name={toast.type === 'error' ? 'alert-circle' : toast.type === 'success' ? 'check-circle' : 'tag'} size={16} />
+                                {toast.message}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
