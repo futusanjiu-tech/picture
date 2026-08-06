@@ -810,7 +810,7 @@
 
             const setAsTop = async (projectId) => {
                 if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
-                const nextProjs = projects.map(p => p.id === projectId ? { ...p, priority: Date.now() } : p);
+                const nextProjs = projects.map(p => p.id === projectId ? { ...p, priority: Date.now() + 1e14 } : p);
                 try { 
                     await saveDataToGitHub(config, categories, nextProjs); 
                     setProjects(nextProjs); 
@@ -952,7 +952,27 @@
                     const matchesYear = activeYear === '全部' || String(p.year) === String(activeYear);
                     return matchesCategory && matchesYear;
                 })
-                .sort((a,b) => (b.priority || 0) - (a.priority || 0));
+                .sort((a, b) => {
+                    // 1. 置顶项目优先排在最前
+                    const isPinnedA = (a.priority || 0) > 1e13;
+                    const isPinnedB = (b.priority || 0) > 1e13;
+                    if (isPinnedA && !isPinnedB) return -1;
+                    if (!isPinnedA && isPinnedB) return 1;
+                    if (isPinnedA && isPinnedB) return (b.priority || 0) - (a.priority || 0);
+
+                    // 2. 按年份从新到旧排列 (例如 2025 -> 2024 -> 2023)
+                    const yearA = parseInt(a.year, 10) || 0;
+                    const yearB = parseInt(b.year, 10) || 0;
+                    if (yearB !== yearA) return yearB - yearA;
+
+                    // 3. 同年份按月份从新到旧排列 (例如 12月 -> 1月)
+                    const monthA = parseInt(a.month, 10) || 1;
+                    const monthB = parseInt(b.month, 10) || 1;
+                    if (monthB !== monthA) return monthB - monthA;
+
+                    // 4. 最后按发布时间倒序排列
+                    return (b.priority || 0) - (a.priority || 0);
+                });
 
             const availableYears = ['全部', ...new Set(projects.map(p => p.year).filter(Boolean))].sort((a,b) => b - a);
 
