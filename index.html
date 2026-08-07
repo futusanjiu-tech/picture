@@ -399,7 +399,7 @@
             const [isProcessingFiles, setIsProcessingFiles] = useState(false);
             const [isExpired, setIsExpired] = useState(false); 
             const [isDragOver, setIsDragOver] = useState(false);
-            const [columnCount, setColumnCount] = useState(3);
+            const [columnCount, setColumnCount] = useState(5);
 
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
@@ -438,6 +438,23 @@
                 setForm(prev => ({ ...prev, images: updated }));
             };
 
+            const handleThumbDragStart = (e, idx) => {
+                setDraggedThumbIdx(idx);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleThumbDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+            };
+
+            const handleThumbDrop = (e, targetIdx) => {
+                e.preventDefault();
+                if (draggedThumbIdx === null || draggedThumbIdx === targetIdx) return;
+                handleMoveImage(draggedThumbIdx, targetIdx);
+                setDraggedThumbIdx(null);
+            };
+
             const triggerToast = (msg, type = "info") => {
                 setToast({ show: true, message: msg, type });
                 setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
@@ -456,12 +473,13 @@
                 }
             };
 
-            // Responsive column adaptation: PC maintains classic layout (3 columns), mobile set to 2 columns
             useEffect(() => {
                 const handleResize = () => {
                     const w = window.innerWidth;
-                    if (w >= 1024) setColumnCount(3); // Desktop / Large screens: 3 columns
-                    else setColumnCount(2);          // Mobile / Tablet screens: 2 columns
+                    if (w >= 1280) setColumnCount(5);
+                    else if (w >= 1024) setColumnCount(4);
+                    else if (w >= 768) setColumnCount(3);
+                    else setColumnCount(2);
                 };
                 handleResize();
                 window.addEventListener('resize', handleResize);
@@ -599,7 +617,7 @@
                     }
                 } catch(e) { 
                     triggerToast("已进入展示视图", "info"); 
-                } finally { 
+                } fontFinally: { 
                     setIsLoaded(true); 
                 }
             };
@@ -864,6 +882,20 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
+            const handleCancelEdit = () => {
+                setEditingId(null);
+                setForm({ 
+                    title: '', 
+                    description: '', 
+                    type: '全部', 
+                    year: new Date().getFullYear(), 
+                    month: new Date().getMonth() + 1, 
+                    imageUrlsText: '', 
+                    images: [],
+                    videoUrl: '' 
+                });
+            };
+
             const handleHeaderUpload = async (e) => {
                 const files = e.target.files;
                 if (!files || files.length === 0) return;
@@ -981,9 +1013,9 @@
             if (!owner || !repo) {
                 return (
                     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8">
-                        <div className="w-full max-w-xl bg-white rounded-3xl p-6 md:p-12 shadow-xl border border-slate-100 text-left">
+                        <div className="w-full max-w-xl bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-100 text-left">
                             <div className="w-16 h-16 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg mb-8">G</div>
-                            <h2 className="text-2xl md:text-3xl font-black mb-3">连接您的 GitHub 画廊数据库</h2>
+                            <h2 className="text-3xl font-black mb-3">连接您的 GitHub 画廊数据库</h2>
                             <p className="text-slate-400 text-xs font-semibold mb-8 uppercase tracking-wider">GitHub Portfolio Onboarding</p>
                             
                             <form onSubmit={handleSetupSubmit} className="space-y-6">
@@ -1001,7 +1033,7 @@
                                         <input required name="gBranch" defaultValue={loginBranch || "main"} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 4：GitHub 访问令牌 (Token)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">步骤 4：GitHub 访问令牌 (Token - 必填项以保持同步)</label>
                                         <input name="gToken" type="password" defaultValue={loginToken} placeholder="ghp_ 开头（确保数据永久写入）" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-4 outline-none text-sm text-slate-800 font-mono" />
                                     </div>
                                 </div>
@@ -1037,10 +1069,10 @@
                             {isAdminMode && (
                                 <button 
                                     onClick={() => setShowAdminUI(!showAdminUI)} 
-                                    className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                                    className={`px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${showAdminUI ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
                                 >
                                     <Icon name={showAdminUI ? "eye" : "edit-3"} size={14} />
-                                    <span>{showAdminUI ? '画廊预览' : '管理后台'}</span>
+                                    {showAdminUI ? '画廊预览模式' : '管理与创作后台'}
                                 </button>
                             )}
                         </div>
@@ -1056,7 +1088,7 @@
                                                 <Icon name="alert-circle" size={20} />
                                             </div>
                                             <div>
-                                                <h4 className="text-sm font-black text-red-100">⚠️ 未绑定 GitHub 写入 Token</h4>
+                                                <h4 className="text-sm font-black text-red-100">⚠️ 未绑定 GitHub 写入 Token（当前所有修改刷新即消失！）</h4>
                                                 <p className="text-xs text-red-200/70">必须在此填入 Token 才能把图片和修改存入云端。</p>
                                             </div>
                                         </div>
@@ -1067,7 +1099,7 @@
                                                 localStorage.setItem('gh_portfolio_token', tok);
                                                 setAccessToken(tok);
                                                 setIsAdminMode(true);
-                                                triggerToast("🎉 GitHub Token 成功绑定！", "success");
+                                                triggerToast("🎉 GitHub Token 成功绑定！现在发布的作品将永久保存。", "success");
                                                 loadDataFromGitHub(owner, repo, branch, tok);
                                             } else {
                                                 triggerToast("请输入有效 Token", "warning");
@@ -1083,7 +1115,7 @@
                                             <Icon name="check-circle" size={16} className="text-emerald-400" />
                                             <span>GitHub 云端同步就绪：Token 已绑定，所有操作将自动写入 GitHub 仓库！</span>
                                         </div>
-                                        <button onClick={() => { localStorage.removeItem('gh_portfolio_token'); setAccessToken(''); triggerToast("已解绑 Token", "info"); }} className="text-emerald-300 hover:text-white underline text-[10px] shrink-0">更换 / 解绑 Token</button>
+                                        <button onClick={() => { localStorage.removeItem('gh_portfolio_token'); setAccessToken(''); triggerToast("已解绑 Token，当前进入只读状态", "info"); }} className="text-emerald-300 hover:text-white underline text-[10px] shrink-0">更换 / 解绑 Token</button>
                                     </div>
                                 )}
 
@@ -1096,7 +1128,7 @@
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-                                    <div className="p-6 md:p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
+                                    <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-2"><Icon name="layout" size={14}/> 主页偏好定制</h4>
                                         <div className="space-y-4">
                                             <div className="space-y-1">
@@ -1270,7 +1302,7 @@
                                         </div>
                                     </div>
                                     
-                                    <div className="lg:col-span-2 p-6 md:p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm">
+                                    <div className="lg:col-span-2 p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-6 flex items-center gap-2">
                                             <Icon name={editingId ? "edit-3" : "plus"} size={14}/> {editingId ? '二次编辑作品信息' : '作品发布与上传中心'}
                                         </h4>
@@ -1330,16 +1362,57 @@
                                                 <input type="file" ref={localProjectFileInputRef} onChange={(e) => handleLocalFiles(e.target.files)} multiple className="hidden" accept="image/*" />
 
                                                 {form.images.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-zinc-400 uppercase tracking-wider ml-1">已选择的图片列表 ({form.images.length}张)</label>
-                                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                                                            {form.images.map((img, idx) => (
-                                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 bg-white shadow-sm">
-                                                                    <img src={img} className="w-full h-full object-cover" />
-                                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                                                        <button type="button" onClick={() => handleMoveImage(idx, idx - 1)} disabled={idx === 0} className="w-6 h-6 bg-white/80 rounded-full text-zinc-900 text-xs font-bold flex items-center justify-center disabled:opacity-30">‹</button>
-                                                                        <button type="button" onClick={() => handleRemoveImageIndex(idx)} className="w-6 h-6 bg-red-600 rounded-full text-white text-xs font-bold flex items-center justify-center">×</button>
-                                                                        <button type="button" onClick={() => handleMoveImage(idx, idx + 1)} disabled={idx === form.images.length - 1} className="w-6 h-6 bg-white/80 rounded-full text-zinc-900 text-xs font-bold flex items-center justify-center disabled:opacity-30">›</button>
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[9px] font-black text-zinc-400 uppercase">已选图片 ({form.images.length}) - 可拖拽或点击箭头调整顺序：</span>
+                                                        </div>
+                                                        <div className="flex gap-2.5 overflow-x-auto py-2 px-1.5 no-scrollbar bg-zinc-100/70 p-2 rounded-2xl border border-zinc-200/60">
+                                                            {form.images.map((imgSrc, idx) => (
+                                                                <div 
+                                                                    key={idx} 
+                                                                    draggable
+                                                                    onDragStart={(e) => handleThumbDragStart(e, idx)}
+                                                                    onDragOver={handleThumbDragOver}
+                                                                    onDrop={(e) => handleThumbDrop(e, idx)}
+                                                                    className={`relative group shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-white cursor-grab active:cursor-grabbing transition-transform ${draggedThumbIdx === idx ? 'opacity-30 scale-90' : ''}`}
+                                                                >
+                                                                    <img src={imgSrc} className="w-full h-full object-cover pointer-events-none" />
+                                                                    
+                                                                    <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm pointer-events-none">
+                                                                        #{idx + 1}
+                                                                    </span>
+
+                                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1">
+                                                                        <div className="flex justify-end">
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={(e) => { e.stopPropagation(); handleRemoveImageIndex(idx); }}
+                                                                                className="w-5 h-5 bg-red-600 text-white rounded-md flex items-center justify-center hover:bg-red-700 transition-colors"
+                                                                                title="删除"
+                                                                            >
+                                                                                <Icon name="x" size={11} />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center gap-1">
+                                                                            <button 
+                                                                                type="button" 
+                                                                                disabled={idx === 0}
+                                                                                onClick={(e) => { e.stopPropagation(); handleMoveImage(idx, idx - 1); }}
+                                                                                className="flex-1 py-1 bg-white/20 hover:bg-white/40 disabled:opacity-20 rounded text-white font-bold text-xs flex items-center justify-center transition-colors"
+                                                                                title="前移"
+                                                                            >
+                                                                                ‹
+                                                                            </button>
+                                                                            <button 
+                                                                                type="button" 
+                                                                                disabled={idx === form.images.length - 1}
+                                                                                onClick={(e) => { e.stopPropagation(); handleMoveImage(idx, idx + 1); }}
+                                                                                className="flex-1 py-1 bg-white/20 hover:bg-white/40 disabled:opacity-20 rounded text-white font-bold text-xs flex items-center justify-center transition-colors"
+                                                                                title="后移"
+                                                                            >
+                                                                                ›
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -1347,19 +1420,22 @@
                                                     </div>
                                                 )}
 
-                                                <div className="space-y-1 pt-2">
-                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">或者批量粘贴图片直链 (每行一个)</label>
-                                                    <textarea value={form.imageUrlsText} onChange={e=>setForm({...form, imageUrlsText:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-mono h-20" placeholder="https://..." />
+                                                <div className="relative">
+                                                    <div className="absolute top-3 left-4 text-zinc-300 pointer-events-none"><Icon name="link" size={14}/></div>
+                                                    <textarea 
+                                                        value={form.imageUrlsText || ''} 
+                                                        onChange={e=>setForm({...form, imageUrlsText:e.target.value})} 
+                                                        className="w-full bg-white border border-zinc-200 rounded-2xl pl-10 pr-4 py-3 outline-none text-[11px] h-20 shadow-sm font-mono whitespace-pre placeholder:text-zinc-300" 
+                                                        placeholder="或粘贴网络图片/COS链接 (换行分隔多张)..."
+                                                    />
                                                 </div>
-                                            </div>
 
-                                            <div className="pt-4 flex gap-3">
-                                                {editingId && (
-                                                    <button type="button" onClick={handleCancelEdit} className="w-1/3 py-4 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 rounded-2xl font-black text-xs uppercase transition-all">取消编辑</button>
-                                                )}
-                                                <button type="submit" disabled={isSyncing || isProcessingFiles} className={`flex-1 py-4 bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${editingId ? 'w-2/3' : 'w-full'}`}>
-                                                    {isSyncing ? '正在写入 GitHub 云端...' : (editingId ? '保存修改并更新至 GitHub' : '发布作品并永久写入 GitHub')}
+                                                <button disabled={isSyncing || isProcessingFiles} type="submit" className="w-full py-4 bg-zinc-950 text-white rounded-xl font-black shadow-lg text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50">
+                                                    {isProcessingFiles ? "正在处理本地文件..." : isSyncing ? "正在写入 GitHub 云端..." : editingId ? "保存并修改云端数据" : "确认发布作品并存入云端"}
                                                 </button>
+                                                {editingId && (
+                                                    <button type="button" onClick={handleCancelEdit} className="w-full py-2 border border-zinc-200 text-zinc-400 font-bold rounded-xl text-[10px]">取消编辑</button>
+                                                )}
                                             </div>
                                         </form>
                                     </div>
@@ -1367,106 +1443,171 @@
                             </div>
                         )}
 
-                        {/* Banner & Header Section */}
-                        {config?.showBanner !== false && (
-                            <div 
-                                style={{ height: `${config?.bannerHeight ?? 280}px` }}
-                                className="w-full rounded-3xl mb-8 md:mb-12 overflow-hidden relative shadow-inner bg-zinc-100 flex items-center justify-center text-center p-6"
+                        <div className="mb-8 md:mb-14 text-left animate-in fade-in duration-1000">
+                            {(config?.showBanner !== false) && (() => {
+                                const headerImgs = (config?.header?.headerImages && config.header.headerImages.length > 0) 
+                                    ? config.header.headerImages 
+                                    : (config?.header?.headerImage ? [config.header.headerImage] : []);
+                                
+                                if (headerImgs.length === 0) return null;
+
+                                const currentHeaderImg = headerImgs[activeHeaderImgIdx] || headerImgs[0];
+                                const bannerH = config?.bannerHeight ?? 280;
+
+                                return (
+                                    <div 
+                                        className="w-full mb-6 md:mb-10 overflow-hidden shadow-xl border border-zinc-100 bg-zinc-900 relative group transition-all duration-300"
+                                        style={{ borderRadius: `${config?.borderRadius ?? 16}px` }}
+                                    >
+                                        <div 
+                                            style={{ height: `${bannerH}px` }}
+                                            className="w-full cursor-pointer relative"
+                                            onClick={() => setActiveLightbox({ open: true, project: { title: config?.header?.title || '个人介绍', type: 'INTRO', year: 'PRO', month: 'FOLIO', imgs: headerImgs }, index: activeHeaderImgIdx })}
+                                        >
+                                            <WatermarkedDisplay src={currentHeaderImg} watermarkText={config?.watermark} watermarkFontSize={config?.watermarkFontSize || 24} alt="Header Banner" className="w-full h-full object-cover" />
+                                        </div>
+
+                                        {headerImgs.length > 1 && (
+                                            <>
+                                                <button 
+                                                    onClick={() => setActiveHeaderImgIdx(prev => (prev - 1 + headerImgs.length) % headerImgs.length)} 
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    ‹
+                                                </button>
+                                                <button 
+                                                    onClick={() => setActiveHeaderImgIdx(prev => (prev + 1) % headerImgs.length)} 
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    ›
+                                                </button>
+
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-black/50 backdrop-blur-md rounded-full">
+                                                    {headerImgs.map((img, idx) => (
+                                                        <button 
+                                                            key={idx} 
+                                                            onClick={() => setActiveHeaderImgIdx(idx)} 
+                                                            className={`w-2.5 h-2.5 rounded-full transition-all ${activeHeaderImgIdx === idx ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/80'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
+                            <h1 
+                                style={{ fontSize: `${config?.titleSize ?? 64}px`, lineHeight: 1.05 }}
+                                className="font-black tracking-tighter mb-6 md:mb-10 text-zinc-900 text-left transition-all duration-300"
                             >
-                                {((config?.header?.headerImages && config.header.headerImages.length > 0) || config?.header?.headerImage) ? (
-                                    <div className="absolute inset-0">
-                                        <img 
-                                            src={config?.header?.headerImages?.[activeHeaderImgIdx] || config?.header?.headerImage} 
-                                            className="w-full h-full object-cover filter brightness-90 transition-all duration-700" 
-                                            alt="Header Banner" 
-                                        />
-                                        <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>
-                                    </div>
-                                ) : (
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-zinc-900 to-zinc-700"></div>
-                                )}
+                                {config?.header?.subtitle || 'MY WORK'}<br/><span className="text-zinc-200">{config?.header?.title || 'PORTFOLIO'}</span>
+                            </h1>
 
-                                <div className="relative z-10 max-w-3xl mx-auto space-y-2 text-white">
-                                    <p className="text-[10px] md:text-xs font-black tracking-widest uppercase text-white/80">{config?.header?.subtitle || 'PRO.PORTFOLIO'}</p>
-                                    <h1 style={{ fontSize: `${Math.min(config?.titleSize ?? 64, 48)}px` }} className="font-black tracking-tight leading-none drop-shadow-md md:text-5xl">{config?.header?.title || 'MY CREATIVE WORK'}</h1>
+                            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pt-6 border-t border-zinc-100">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {categories.map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setActiveCategory(cat.label)}
+                                            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${activeCategory === cat.label ? 'bg-zinc-950 text-white shadow-md scale-105' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    ))}
                                 </div>
-
-                                {config?.header?.headerImages && config.header.headerImages.length > 1 && (
-                                    <div className="absolute bottom-4 right-4 z-20 flex gap-1.5">
-                                        {config.header.headerImages.map((_, idx) => (
-                                            <button 
-                                                key={idx} 
-                                                onClick={() => setActiveHeaderImgIdx(idx)} 
-                                                className={`w-2 h-2 rounded-full transition-all ${activeHeaderImgIdx === idx ? 'bg-white w-6' : 'bg-white/50'}`}
-                                            ></button>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-zinc-400 font-medium">年份筛选：</span>
+                                    <select
+                                        value={activeYear}
+                                        onChange={(e) => setActiveYear(e.target.value)}
+                                        className="bg-zinc-100 text-zinc-800 text-xs font-bold px-3 py-2 rounded-full border-none outline-none cursor-pointer"
+                                    >
+                                        {availableYears.map(yr => (
+                                            <option key={yr} value={yr}>{yr}</option>
                                         ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Filter Navbar */}
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8 pb-4 border-b border-zinc-100">
-                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                                {categories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setActiveCategory(cat.label)}
-                                        className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 ${activeCategory === cat.label ? 'bg-zinc-950 text-white shadow-md scale-105' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}
-                                    >
-                                        {cat.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest shrink-0 mr-1">年份筛选:</span>
-                                {availableYears.map(y => (
-                                    <button
-                                        key={y}
-                                        onClick={() => setActiveYear(y)}
-                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 ${activeYear === y ? 'bg-zinc-950 text-white shadow-sm' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-                                    >
-                                        {y}
-                                    </button>
-                                ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Projects Masonry Grid (Fully Responsive) */}
-                        {displayProjects.length === 0 ? (
-                            <div className="py-24 text-center space-y-3">
-                                <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mx-auto text-zinc-400">
+                        <div className="flex gap-4 md:gap-6 items-start w-full">
+                            {masonryColumns.map((col, colIdx) => (
+                                <div key={colIdx} className="flex flex-col gap-4 md:gap-6 flex-1 min-w-0">
+                                    {col.map(project => (
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            isAdminMode={isAdminMode}
+                                            showAdminUI={showAdminUI}
+                                            config={config}
+                                            onSetAsTop={setAsTop}
+                                            onToggleVisibility={toggleVisibility}
+                                            onStartEdit={handleStartEdit}
+                                            onDelete={handleDeleteProject}
+                                            onOpenLightbox={(proj, idx) => setActiveLightbox({ open: true, project: proj, index: idx })}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+
+                        {displayProjects.length === 0 && (
+                            <div className="col-span-full py-24 text-center border-2 border-dashed border-zinc-100 rounded-3xl">
+                                <div className="w-16 h-16 bg-zinc-100 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Icon name="image" size={24} />
                                 </div>
-                                <h3 className="text-base font-black text-zinc-800">暂无相关作品</h3>
-                                <p className="text-xs text-zinc-400">当前分类或筛选目录下没有找到作品内容。</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
-                                {masonryColumns.map((colProjects, colIdx) => (
-                                    <div key={colIdx} className="flex flex-col gap-3 md:gap-8">
-                                        {colProjects.map(project => (
-                                            <ProjectCard
-                                                key={project.id}
-                                                project={project}
-                                                isAdminMode={isAdminMode}
-                                                showAdminUI={showAdminUI}
-                                                config={config}
-                                                onSetAsTop={setAsTop}
-                                                onToggleVisibility={toggleVisibility}
-                                                onStartEdit={handleStartEdit}
-                                                onDelete={handleDeleteProject}
-                                                onOpenLightbox={(proj, imgIdx) => setActiveLightbox({ open: true, project: proj, index: imgIdx })}
-                                            />
-                                        ))}
-                                    </div>
-                                ))}
+                                <h3 className="text-base font-bold text-zinc-700 mb-1">暂无展示作品</h3>
+                                <p className="text-xs text-zinc-400">切换分类筛选或进入后台发布全新作品</p>
                             </div>
                         )}
                     </main>
 
-                    {/* Lightbox Modal */}
+                    {toast.show && (
+                        <div className={`fixed bottom-6 right-6 z-[3000] px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-300 ${
+                            toast.type === 'success' ? 'bg-zinc-950 text-white' : 
+                            toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-white'
+                        }`}>
+                            <Icon name={toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} />
+                            <span>{toast.message}</span>
+                        </div>
+                    )}
+
+                    {confirmModal.show && (
+                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-zinc-100 text-center animate-in zoom-in-95 duration-200">
+                                <h3 className="text-sm font-black text-zinc-900 mb-2">{confirmModal.title}</h3>
+                                <div className="flex gap-2 mt-6">
+                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-xs hover:bg-zinc-200">取消</button>
+                                    <button onClick={() => { if (confirmModal.onConfirm) confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700 shadow-md">确认操作</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {shareModal && (
+                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-zinc-100 text-left animate-in zoom-in-95 duration-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-base font-black text-zinc-900">生成画廊分享链接</h3>
+                                    <button onClick={() => setShareModal(false)} className="p-2 text-zinc-400 hover:text-zinc-600"><Icon name="x" size={16}/></button>
+                                </div>
+                                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">生成访问此画廊特制的专属链接，可设置时效防护：</p>
+                                <div className="space-y-3">
+                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-xl font-bold text-xs hover:bg-zinc-800 flex items-center justify-center gap-2 shadow-md">
+                                        <Icon name="link" size={14} /> 复制永久公开访问链接
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                        <Icon name="clock" size={14} /> 复制 7 天有效临时链接
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(30)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                        <Icon name="clock" size={14} /> 复制 30 天有效临时链接
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeLightbox.open && (
                         <LightboxModal
                             project={activeLightbox.project}
@@ -1476,55 +1617,12 @@
                             onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })}
                         />
                     )}
-
-                    {/* Share Modal */}
-                    {shareModal && (
-                        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 text-left">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-black">分享画廊访问链接</h3>
-                                    <button onClick={() => setShareModal(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-600"><Icon name="x" size={16}/></button>
-                                </div>
-                                <div className="space-y-3">
-                                    <p className="text-xs text-zinc-500">您可以直接复制永久访问链接，或生成带有期限的限时分享链接：</p>
-                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-2xl text-xs font-bold shadow-md hover:bg-zinc-800 transition-all">复制永久访问链接</button>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={() => handleCopyShareLink(1)} className="py-3 bg-zinc-100 text-zinc-800 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-all">复制 1 天限时链接</button>
-                                        <button onClick={() => handleCopyShareLink(7)} className="py-3 bg-zinc-100 text-zinc-800 rounded-xl text-xs font-bold hover:bg-zinc-200 transition-all">复制 7 天限时链接</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Confirm Modal */}
-                    {confirmModal.show && (
-                        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full space-y-6 shadow-2xl text-center">
-                                <div className="w-12 h-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
-                                    <Icon name="alert-circle" size={24} />
-                                </div>
-                                <h3 className="text-base font-black text-zinc-900">{confirmModal.title}</h3>
-                                <div className="flex gap-3 pt-2">
-                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-xs font-bold">取消</button>
-                                    <button onClick={() => { confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl text-xs font-bold shadow-md">确认删除</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Toast Notification */}
-                    {toast.show && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[3000] bg-zinc-950 text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-bottom-5">
-                            <span className={`w-2 h-2 rounded-full ${toast.type === 'error' ? 'bg-red-500' : (toast.type === 'success' ? 'bg-emerald-400' : 'bg-sky-400')}`}></span>
-                            {toast.message}
-                        </div>
-                    )}
                 </div>
             );
         };
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
