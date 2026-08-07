@@ -25,12 +25,6 @@
         .transition-all-fast { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .max-w-gallery { max-width: 1900px; margin-left: auto; margin-right: auto; }
         
-        .gallery-columns { column-gap: 0.75rem; column-count: 2; }
-        @media (min-width: 768px) { .gallery-columns { column-count: 3; column-gap: 1.5rem; } }
-        @media (min-width: 1024px) { .gallery-columns { column-count: 4; } }
-        @media (min-width: 1280px) { .gallery-columns { column-count: 5; } }
-        
-        .break-inside-avoid { break-inside: avoid; -webkit-column-break-inside: avoid; }
         body { padding-bottom: env(safe-area-inset-bottom); }
         
         .drag-active {
@@ -145,7 +139,6 @@
                     >
                         <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} watermarkFontSize={watermarkFontSize} alt={alt} className={`${className} group-hover:scale-[1.01] transition-transform duration-500`} />
                     </div>
-                    {/* 固定底部的白色半透明玻璃质感提示条 */}
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-10">
                         <span className="bg-white/80 text-zinc-900 text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md border border-white/60 flex items-center gap-1.5 whitespace-nowrap">
                             <Icon name="eye" size={13} className="text-zinc-700" /> 点击放大 / 滚动查看长图
@@ -173,14 +166,13 @@
             }, [selectedImgIdx]);
 
             return (
-                <div className="break-inside-avoid mb-6 bg-white rounded-3xl border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group text-left relative">
+                <div className="w-full bg-white rounded-3xl border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group text-left relative">
                     {project.isHidden && (
                         <div className="absolute top-3 left-3 z-20 bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
                             <Icon name="eye-off" size={12} /> 隐藏中
                         </div>
                     )}
 
-                    {/* Top Media Area with Floating Action Icons */}
                     <div className="relative">
                         <MediaRenderer
                             videoUrl={project.videoUrl}
@@ -192,7 +184,6 @@
                             onClick={() => onOpenLightbox(project, selectedImgIdx)}
                         />
 
-                        {/* Top-Right Floating Controls (Matching exact design in reference image) */}
                         {isAdminMode && showAdminUI && (
                             <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-white/40 backdrop-blur-md p-1 rounded-full shadow-lg border border-white/40">
                                 <button onClick={() => onSetAsTop(project.id)} title="置顶" className="w-8 h-8 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
@@ -211,7 +202,6 @@
                         )}
                     </div>
 
-                    {/* Bottom Details Section */}
                     <div className="p-4 md:p-5 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                             <span className="px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full text-xs font-bold tracking-wide">
@@ -227,7 +217,6 @@
                             <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">{project.description}</p>
                         )}
 
-                        {/* Sub-images Thumbnails Row */}
                         {images.length > 0 && (
                             <div className="pt-2">
                                 <div className="relative group/thumbs">
@@ -407,6 +396,7 @@
             const [isProcessingFiles, setIsProcessingFiles] = useState(false);
             const [isExpired, setIsExpired] = useState(false); 
             const [isDragOver, setIsDragOver] = useState(false);
+            const [columnCount, setColumnCount] = useState(5);
 
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
@@ -435,6 +425,33 @@
             const headerFileInputRef = useRef(null);
             const localProjectFileInputRef = useRef(null);
 
+            const [draggedThumbIdx, setDraggedThumbIdx] = useState(null);
+
+            const handleMoveImage = (fromIdx, toIdx) => {
+                if (toIdx < 0 || toIdx >= form.images.length) return;
+                const updated = [...form.images];
+                const [moved] = updated.splice(fromIdx, 1);
+                updated.splice(toIdx, 0, moved);
+                setForm(prev => ({ ...prev, images: updated }));
+            };
+
+            const handleThumbDragStart = (e, idx) => {
+                setDraggedThumbIdx(idx);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleThumbDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+            };
+
+            const handleThumbDrop = (e, targetIdx) => {
+                e.preventDefault();
+                if (draggedThumbIdx === null || draggedThumbIdx === targetIdx) return;
+                handleMoveImage(draggedThumbIdx, targetIdx);
+                setDraggedThumbIdx(null);
+            };
+
             const triggerToast = (msg, type = "info") => {
                 setToast({ show: true, message: msg, type });
                 setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
@@ -452,6 +469,19 @@
                     triggerToast("复制失败，请手动复制", "error");
                 }
             };
+
+            useEffect(() => {
+                const handleResize = () => {
+                    const w = window.innerWidth;
+                    if (w >= 1280) setColumnCount(5);
+                    else if (w >= 1024) setColumnCount(4);
+                    else if (w >= 768) setColumnCount(3);
+                    else setColumnCount(2);
+                };
+                handleResize();
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
 
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
@@ -584,7 +614,7 @@
                     }
                 } catch(e) { 
                     triggerToast("已进入展示视图", "info"); 
-                } finally { 
+                } fontFinally: { 
                     setIsLoaded(true); 
                 }
             };
@@ -953,28 +983,29 @@
                     return matchesCategory && matchesYear;
                 })
                 .sort((a, b) => {
-                    // 1. 置顶项目优先排在最前
                     const isPinnedA = (a.priority || 0) > 1e13;
                     const isPinnedB = (b.priority || 0) > 1e13;
                     if (isPinnedA && !isPinnedB) return -1;
                     if (!isPinnedA && isPinnedB) return 1;
                     if (isPinnedA && isPinnedB) return (b.priority || 0) - (a.priority || 0);
 
-                    // 2. 按年份从新到旧排列 (例如 2025 -> 2024 -> 2023)
                     const yearA = parseInt(a.year, 10) || 0;
                     const yearB = parseInt(b.year, 10) || 0;
                     if (yearB !== yearA) return yearB - yearA;
 
-                    // 3. 同年份按月份从新到旧排列 (例如 12月 -> 1月)
                     const monthA = parseInt(a.month, 10) || 1;
                     const monthB = parseInt(b.month, 10) || 1;
                     if (monthB !== monthA) return monthB - monthA;
 
-                    // 4. 最后按发布时间倒序排列
                     return (b.priority || 0) - (a.priority || 0);
                 });
 
             const availableYears = ['全部', ...new Set(projects.map(p => p.year).filter(Boolean))].sort((a,b) => b - a);
+
+            const masonryColumns = Array.from({ length: columnCount }, () => []);
+            displayProjects.forEach((project, index) => {
+                masonryColumns[index % columnCount].push(project);
+            });
 
             if (!owner || !repo) {
                 return (
@@ -1029,7 +1060,6 @@
 
             return (
                 <div className="min-h-screen bg-white font-sans selection:bg-zinc-900 selection:text-white">
-                    {}
                     <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-100 px-4 md:px-10 h-16 md:h-20 flex items-center justify-between">
                         <div className="text-sm md:text-xl font-black tracking-tighter cursor-pointer" onClick={() => window.location.href='/'}>PORTFOLIO.LIVE</div>
                         <div className="flex items-center gap-2">
@@ -1045,12 +1075,9 @@
                         </div>
                     </nav>
 
-                    {/* Main Workspace */}
                     <main className="pt-24 md:pt-32 pb-32 md:pb-48 px-4 md:px-10 max-w-gallery">
                         {showAdminUI && (
                             <div className="space-y-6 mb-24 animate-in slide-in-from-top-6 duration-700 text-left">
-                                
-                                {/* TOKEN STATUS ALERT BAR */}
                                 {!accessToken ? (
                                     <div className="p-6 bg-red-950 text-white rounded-3xl border border-red-500/30 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
                                         <div className="flex items-center gap-3">
@@ -1098,7 +1125,6 @@
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-                                    {/* Preference Customization Panel */}
                                     <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm space-y-6">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-2"><Icon name="layout" size={14}/> 主页偏好定制</h4>
                                         <div className="space-y-4">
@@ -1111,7 +1137,6 @@
                                                 <input value={config?.header?.subtitle || ''} onChange={e=>{const c={...config, header:{...config.header, subtitle:e.target.value}}; setConfig(c); }} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs" />
                                             </div>
 
-                                            {/* 展示区自定义高度与显隐设置 */}
                                             <div className="pt-2 border-t border-zinc-200 space-y-3">
                                                 <div className="flex items-center justify-between">
                                                     <label className="text-[9px] font-black text-zinc-500 uppercase">显示顶部展示区 (Banner)</label>
@@ -1184,7 +1209,6 @@
                                                 </div>
                                                 <input type="file" ref={headerFileInputRef} onChange={handleHeaderUpload} multiple className="hidden" accept="image/*" />
 
-                                                {/* Header Images Preview Grid */}
                                                 {((config?.header?.headerImages && config.header.headerImages.length > 0) || config?.header?.headerImage) && (
                                                     <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
                                                         {(config?.header?.headerImages && config.header.headerImages.length > 0 
@@ -1275,74 +1299,124 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Content Upload & Form Panel */}
                                     <div className="lg:col-span-2 p-8 bg-zinc-50 rounded-3xl border border-zinc-200 shadow-sm">
                                         <h4 className="text-[10px] font-black uppercase text-zinc-400 mb-6 flex items-center gap-2">
                                             <Icon name={editingId ? "edit-3" : "plus"} size={14}/> {editingId ? '二次编辑作品信息' : '作品发布与上传中心'}
                                         </h4>
-                                        
-                                        <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                                            <div className="space-y-3">
-                                                <input required value={form.title} onChange={e=>setForm({...form, title:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs shadow-sm font-bold text-zinc-900" placeholder="作品标题名称" />
-                                                <div className="flex gap-2">
-                                                    <select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="flex-1 bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs shadow-sm cursor-pointer font-medium">
-                                                        {categories.map(c => <option key={c.id} value={c.label}>{c.label}</option>)}
-                                                    </select>
-                                                    <input type="number" value={form.year} onChange={e=>setForm({...form, year:e.target.value})} className="w-20 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm font-mono" />
-                                                    <input type="number" value={form.month} onChange={e=>setForm({...form, month:e.target.value})} className="w-12 bg-white border border-zinc-200 rounded-xl px-2 outline-none text-xs text-center shadow-sm font-mono" />
+
+                                        <form onSubmit={handleUpload} className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">作品标题</label>
+                                                    <input required value={form.title} onChange={e=>setForm({...form, title:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-bold" placeholder="输入作品标题..." />
                                                 </div>
-                                                <input value={form.videoUrl || ''} onChange={e=>setForm({...form, videoUrl:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-3 outline-none text-xs shadow-sm font-mono" placeholder="动态视频链接 (MP4 / B站 iframe)" />
-                                                <textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-5 py-4 outline-none text-xs h-28 shadow-sm leading-relaxed" placeholder="作品简述与创作背景..." />
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">所属分类</label>
+                                                    <select value={form.type} onChange={e=>setForm({...form, type:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-bold cursor-pointer">
+                                                        <option value="全部">全部分类</option>
+                                                        {categories.filter(c => c.id !== 'All').map(c => (
+                                                            <option key={c.id} value={c.label}>{c.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
-                                            
-                                            <div className="space-y-4 flex flex-col justify-between">
-                                                {/* Local File Dropzone */}
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">年份</label>
+                                                    <input type="number" value={form.year} onChange={e=>setForm({...form, year:parseInt(e.target.value)||new Date().getFullYear()})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-bold" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">月份</label>
+                                                    <input type="number" min="1" max="12" value={form.month} onChange={e=>setForm({...form, month:parseInt(e.target.value)||1})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-bold" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">作品描述 / 简介</label>
+                                                <textarea value={form.description} onChange={e=>setForm({...form, description:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs h-20" placeholder="简短描述作品背景或设计亮点..." />
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-zinc-400 ml-2 uppercase">视频链接 / B站 iframe (可选)</label>
+                                                <input value={form.videoUrl} onChange={e=>setForm({...form, videoUrl:e.target.value})} className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 outline-none text-xs font-mono" placeholder="可粘贴 .mp4 / iframe / 哔哩哔哩嵌入代码..." />
+                                            </div>
+
+                                            <div className="space-y-3 pt-2">
                                                 <div 
                                                     onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                                                     onDragLeave={() => setIsDragOver(false)}
                                                     onDrop={handleFileDrop}
                                                     onClick={() => localProjectFileInputRef.current.click()}
-                                                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver ? 'drag-active' : 'border-zinc-200 hover:border-zinc-400 bg-white'}`}
+                                                    className={`w-full py-8 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${isDragOver ? 'border-zinc-900 bg-zinc-100' : 'border-zinc-200 hover:bg-zinc-100/50 bg-white'}`}
                                                 >
-                                                    <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-600">
+                                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600">
                                                         <Icon name="upload" size={18} />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-zinc-700">点击选择本地图片 或 将图片拖拽至此</p>
-                                                        <p className="text-[9px] text-zinc-400 font-medium">支持多图选中（自动高保真压缩）</p>
-                                                    </div>
-                                                    <input 
-                                                        type="file" 
-                                                        ref={localProjectFileInputRef} 
-                                                        onChange={(e) => handleLocalFiles(e.target.files)} 
-                                                        multiple 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                    />
+                                                    <span className="text-xs font-bold text-zinc-700">点击或拖拽本地图片到此处上传</span>
+                                                    <span className="text-[10px] text-zinc-400">支持多图上传、自动高清压缩 (JPEG/PNG)</span>
                                                 </div>
+                                                <input type="file" ref={localProjectFileInputRef} onChange={(e) => handleLocalFiles(e.target.files)} multiple className="hidden" accept="image/*" />
 
-                                                {/* Selected Local Images Preview */}
                                                 {form.images.length > 0 && (
-                                                    <div className="space-y-1">
-                                                        <span className="text-[9px] font-black text-zinc-400 uppercase">已选择图片 ({form.images.length})：</span>
-                                                        <div className="flex gap-2 overflow-x-auto py-2 no-scrollbar">
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[9px] font-black text-zinc-400 uppercase">已选图片 ({form.images.length}) - 可拖拽或点击箭头调整顺序：</span>
+                                                        </div>
+                                                        <div className="flex gap-2.5 overflow-x-auto py-2 px-1.5 no-scrollbar bg-zinc-100/70 p-2 rounded-2xl border border-zinc-200/60">
                                                             {form.images.map((imgSrc, idx) => (
-                                                                <div key={idx} className="relative group shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-zinc-200 shadow-sm">
-                                                                    <img src={imgSrc} className="w-full h-full object-cover" />
-                                                                    <button 
-                                                                        type="button" 
-                                                                        onClick={(e) => { e.stopPropagation(); handleRemoveImageIndex(idx); }}
-                                                                        className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                    >
-                                                                        <Icon name="x" size={12} />
-                                                                    </button>
+                                                                <div 
+                                                                    key={idx} 
+                                                                    draggable
+                                                                    onDragStart={(e) => handleThumbDragStart(e, idx)}
+                                                                    onDragOver={handleThumbDragOver}
+                                                                    onDrop={(e) => handleThumbDrop(e, idx)}
+                                                                    className={`relative group shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-white cursor-grab active:cursor-grabbing transition-transform ${draggedThumbIdx === idx ? 'opacity-30 scale-90' : ''}`}
+                                                                >
+                                                                    <img src={imgSrc} className="w-full h-full object-cover pointer-events-none" />
+                                                                    
+                                                                    <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm pointer-events-none">
+                                                                        #{idx + 1}
+                                                                    </span>
+
+                                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1">
+                                                                        <div className="flex justify-end">
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={(e) => { e.stopPropagation(); handleRemoveImageIndex(idx); }}
+                                                                                className="w-5 h-5 bg-red-600 text-white rounded-md flex items-center justify-center hover:bg-red-700 transition-colors"
+                                                                                title="删除"
+                                                                            >
+                                                                                <Icon name="x" size={11} />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center gap-1">
+                                                                            <button 
+                                                                                type="button" 
+                                                                                disabled={idx === 0}
+                                                                                onClick={(e) => { e.stopPropagation(); handleMoveImage(idx, idx - 1); }}
+                                                                                className="flex-1 py-1 bg-white/20 hover:bg-white/40 disabled:opacity-20 rounded text-white font-bold text-xs flex items-center justify-center transition-colors"
+                                                                                title="前移"
+                                                                            >
+                                                                                ‹
+                                                                            </button>
+                                                                            <button 
+                                                                                type="button" 
+                                                                                disabled={idx === form.images.length - 1}
+                                                                                onClick={(e) => { e.stopPropagation(); handleMoveImage(idx, idx + 1); }}
+                                                                                className="flex-1 py-1 bg-white/20 hover:bg-white/40 disabled:opacity-20 rounded text-white font-bold text-xs flex items-center justify-center transition-colors"
+                                                                                title="后移"
+                                                                            >
+                                                                                ›
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                {/* Optional Cloud Link Input */}
                                                 <div className="relative">
                                                     <div className="absolute top-3 left-4 text-zinc-300 pointer-events-none"><Icon name="link" size={14}/></div>
                                                     <textarea 
@@ -1366,8 +1440,6 @@
                             </div>
                         )}
 
-                        {}
-                        {/* Gallery Header Banner */}
                         <div className="mb-8 md:mb-14 text-left animate-in fade-in duration-1000">
                             {(config?.showBanner !== false) && (() => {
                                 const headerImgs = (config?.header?.headerImages && config.header.headerImages.length > 0) 
@@ -1453,100 +1525,91 @@
                             </div>
                         </div>
 
-                        {}
-                        {/* Gallery Grid */}
-                        <div className="gallery-columns">
-                            {displayProjects.map((project) => (
-                                <ProjectCard
-                                    key={project.id}
-                                    project={project}
-                                    isAdminMode={isAdminMode}
-                                    showAdminUI={showAdminUI}
-                                    config={config}
-                                    onSetAsTop={setAsTop}
-                                    onToggleVisibility={toggleVisibility}
-                                    onStartEdit={handleStartEdit}
-                                    onDelete={handleDeleteProject}
-                                    onOpenLightbox={(proj, idx) => setActiveLightbox({ open: true, project: proj, index: idx })}
-                                />
+                        <div className="flex gap-4 md:gap-6 items-start w-full">
+                            {masonryColumns.map((col, colIdx) => (
+                                <div key={colIdx} className="flex flex-col gap-4 md:gap-6 flex-1 min-w-0">
+                                    {col.map(project => (
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            isAdminMode={isAdminMode}
+                                            showAdminUI={showAdminUI}
+                                            config={config}
+                                            onSetAsTop={setAsTop}
+                                            onToggleVisibility={toggleVisibility}
+                                            onStartEdit={handleStartEdit}
+                                            onDelete={handleDeleteProject}
+                                            onOpenLightbox={(proj, idx) => setActiveLightbox({ open: true, project: proj, index: idx })}
+                                        />
+                                    ))}
+                                </div>
                             ))}
                         </div>
 
                         {displayProjects.length === 0 && (
-                            <div className="py-20 text-center text-zinc-400 bg-zinc-50 rounded-3xl border border-dashed border-zinc-200">
-                                <Icon name="image" size={36} className="mx-auto mb-3 opacity-40" />
-                                <p className="text-sm font-bold">暂无相关作品</p>
-                                <p className="text-xs mt-1 text-zinc-400">请尝试选择其他分类或在管理后台发布新作品</p>
+                            <div className="col-span-full py-24 text-center border-2 border-dashed border-zinc-100 rounded-3xl">
+                                <div className="w-16 h-16 bg-zinc-100 text-zinc-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Icon name="image" size={24} />
+                                </div>
+                                <h3 className="text-base font-bold text-zinc-700 mb-1">暂无展示作品</h3>
+                                <p className="text-xs text-zinc-400">切换分类筛选或进入后台发布全新作品</p>
                             </div>
                         )}
                     </main>
 
-                    {}
-                    {/* Lightbox Modal */}
+                    {toast.show && (
+                        <div className={`fixed bottom-6 right-6 z-[3000] px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-300 ${
+                            toast.type === 'success' ? 'bg-zinc-950 text-white' : 
+                            toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-white'
+                        }`}>
+                            <Icon name={toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} />
+                            <span>{toast.message}</span>
+                        </div>
+                    )}
+
+                    {confirmModal.show && (
+                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-zinc-100 text-center animate-in zoom-in-95 duration-200">
+                                <h3 className="text-sm font-black text-zinc-900 mb-2">{confirmModal.title}</h3>
+                                <div className="flex gap-2 mt-6">
+                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-xs hover:bg-zinc-200">取消</button>
+                                    <button onClick={() => { if (confirmModal.onConfirm) confirmModal.onConfirm(); setConfirmModal({ show: false, title: '', onConfirm: null }); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700 shadow-md">确认操作</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {shareModal && (
+                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-zinc-100 text-left animate-in zoom-in-95 duration-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-base font-black text-zinc-900">生成画廊分享链接</h3>
+                                    <button onClick={() => setShareModal(false)} className="p-2 text-zinc-400 hover:text-zinc-600"><Icon name="x" size={16}/></button>
+                                </div>
+                                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">生成访问此画廊特制的专属链接，可设置时效防护：</p>
+                                <div className="space-y-3">
+                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-xl font-bold text-xs hover:bg-zinc-800 flex items-center justify-center gap-2 shadow-md">
+                                        <Icon name="link" size={14} /> 复制永久公开访问链接
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                        <Icon name="clock" size={14} /> 复制 7 天有效临时链接
+                                    </button>
+                                    <button onClick={() => handleCopyShareLink(30)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
+                                        <Icon name="clock" size={14} /> 复制 30 天有效临时链接
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {activeLightbox.open && (
                         <LightboxModal
                             project={activeLightbox.project}
                             initialIndex={activeLightbox.index}
                             watermark={config?.watermark}
-                            watermarkFontSize={config?.watermarkFontSize}
+                            watermarkFontSize={config?.watermarkFontSize || 24}
                             onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })}
                         />
-                    )}
-
-                    {/* Share Modal */}
-                    {shareModal && (
-                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 text-left animate-in zoom-in-95 duration-150">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-black text-zinc-900">分享画廊地址</h3>
-                                    <button onClick={() => setShareModal(false)} className="p-2 hover:bg-zinc-100 rounded-full text-zinc-400 hover:text-zinc-900">
-                                        <Icon name="x" size={18} />
-                                    </button>
-                                </div>
-                                <p className="text-xs text-zinc-500 leading-relaxed">生成访客只读链接（访客无法查看或修改你的 GitHub Token）。</p>
-                                <div className="space-y-3">
-                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-2xl font-bold text-xs shadow-md hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2">
-                                        <Icon name="share-2" size={14} /> 复制永久公开链接
-                                    </button>
-                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3.5 bg-zinc-100 text-zinc-800 rounded-2xl font-bold text-xs hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
-                                        <Icon name="clock" size={14} /> 复制 7 天有效临时链接
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Confirm Modal */}
-                    {confirmModal.show && (
-                        <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-150">
-                                <div className="w-12 h-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
-                                    <Icon name="alert-circle" size={24} />
-                                </div>
-                                <h3 className="text-base font-black text-zinc-900 leading-snug">{confirmModal.title}</h3>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setConfirmModal({ show: false, title: '', onConfirm: null })} className="flex-1 py-3 bg-zinc-100 text-zinc-700 font-bold text-xs rounded-xl hover:bg-zinc-200 transition-colors">
-                                        取消
-                                    </button>
-                                    <button onClick={() => { const fn = confirmModal.onConfirm; setConfirmModal({ show: false, title: '', onConfirm: null }); if(fn) fn(); }} className="flex-1 py-3 bg-red-600 text-white font-bold text-xs rounded-xl shadow-md hover:bg-red-700 transition-colors">
-                                        确认操作
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Toast Notification */}
-                    {toast.show && (
-                        <div className={`fixed bottom-6 right-6 z-[4000] px-5 py-3.5 rounded-2xl text-xs font-bold shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-200 ${
-                            toast.type === 'error' ? 'bg-red-900 text-red-100 border border-red-700' :
-                            toast.type === 'success' ? 'bg-zinc-900 text-white border border-zinc-700' :
-                            toast.type === 'warning' ? 'bg-amber-900 text-amber-100 border border-amber-700' :
-                            'bg-zinc-900 text-white'
-                        }`}>
-                            <Icon name={toast.type === 'error' ? 'alert-circle' : toast.type === 'success' ? 'check-circle' : 'alert-circle'} size={16} />
-                            <span>{toast.message}</span>
-                        </div>
                     )}
                 </div>
             );
