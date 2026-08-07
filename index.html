@@ -120,24 +120,24 @@
                     }
                     if (src.startsWith('//')) src = 'https:' + src;
                     return (
-                        <div className="aspect-video w-full rounded-t-2xl overflow-hidden bg-black">
+                        <div className={`aspect-video w-full overflow-hidden bg-black ${className || ''}`}>
                             <iframe src={src} scrolling="no" frameBorder="0" allowFullScreen={true} className="w-full h-full"></iframe>
                         </div>
                     );
                 } else {
                     return (
-                        <video src={videoUrl} autoPlay loop muted playsInline controls className="w-full h-auto block bg-black rounded-t-2xl max-h-[75vh]"></video>
+                        <video src={videoUrl} autoPlay loop muted playsInline controls className={`w-full h-auto block bg-black max-h-[75vh] ${className || ''}`}></video>
                     );
                 }
             }
             return (
-                <div className="cursor-pointer group relative overflow-hidden rounded-t-2xl">
+                <div className="cursor-pointer group relative overflow-hidden">
                     <div 
                         onClick={onClick} 
                         style={{ maxHeight: `${cardMaxHeight}px` }}
                         className="overflow-y-auto no-scrollbar relative"
                     >
-                        <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} watermarkFontSize={watermarkFontSize} alt={alt} className={`${className} group-hover:scale-[1.01] transition-transform duration-500`} />
+                        <WatermarkedDisplay src={coverImg} watermarkText={watermarkText} watermarkFontSize={watermarkFontSize} alt={alt} className={`${className || ''} group-hover:scale-[1.01] transition-transform duration-500`} />
                     </div>
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-10">
                         <span className="bg-white/80 text-zinc-900 text-[11px] font-bold px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md border border-white/60 flex items-center gap-1.5 whitespace-nowrap">
@@ -166,7 +166,10 @@
             }, [selectedImgIdx]);
 
             return (
-                <div className="w-full bg-white rounded-3xl border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group text-left relative">
+                <div 
+                    className="w-full bg-white border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group text-left relative"
+                    style={{ borderRadius: `${config?.borderRadius ?? 16}px` }}
+                >
                     {project.isHidden && (
                         <div className="absolute top-3 left-3 z-20 bg-amber-500/90 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
                             <Icon name="eye-off" size={12} /> 隐藏中
@@ -1452,7 +1455,10 @@
                                 const bannerH = config?.bannerHeight ?? 280;
 
                                 return (
-                                    <div className="w-full mb-6 md:mb-10 rounded-3xl overflow-hidden shadow-xl border border-zinc-100 bg-zinc-900 relative group transition-all duration-300">
+                                    <div 
+                                        className="w-full mb-6 md:mb-10 overflow-hidden shadow-xl border border-zinc-100 bg-zinc-900 relative group transition-all duration-300"
+                                        style={{ borderRadius: `${config?.borderRadius ?? 16}px` }}
+                                    >
                                         <div 
                                             style={{ height: `${bannerH}px` }}
                                             className="w-full cursor-pointer relative"
