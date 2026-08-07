@@ -456,14 +456,12 @@
                 }
             };
 
-            // Responsive column adaptation for mobile & desktop
+            // Responsive column adaptation: PC maintains classic layout (3 columns), mobile set to 2 columns
             useEffect(() => {
                 const handleResize = () => {
                     const w = window.innerWidth;
-                    if (w >= 1280) setColumnCount(3);
-                    else if (w >= 1024) setColumnCount(3);
-                    else if (w >= 768) setColumnCount(2);
-                    else setColumnCount(1);
+                    if (w >= 1024) setColumnCount(3); // Desktop / Large screens: 3 columns
+                    else setColumnCount(2);          // Mobile / Tablet screens: 2 columns
                 };
                 handleResize();
                 window.addEventListener('resize', handleResize);
@@ -1442,12 +1440,12 @@
                                     <Icon name="image" size={24} />
                                 </div>
                                 <h3 className="text-base font-black text-zinc-800">暂无相关作品</h3>
-                                <p className="text-xs text-zinc-400">当前分类或筛选条件下没有找到作品内容。</p>
+                                <p className="text-xs text-zinc-400">当前分类或筛选目录下没有找到作品内容。</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
                                 {masonryColumns.map((colProjects, colIdx) => (
-                                    <div key={colIdx} className="flex flex-col gap-6 md:gap-8">
+                                    <div key={colIdx} className="flex flex-col gap-3 md:gap-8">
                                         {colProjects.map(project => (
                                             <ProjectCard
                                                 key={project.id}
