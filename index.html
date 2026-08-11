@@ -93,6 +93,12 @@
                 case 'link': return <svg {...svgProps}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
                 case 'alert-circle': return <svg {...svgProps}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
                 case 'check-circle': return <svg {...svgProps}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+                case 'sort': return <svg {...svgProps}><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>;
+                case 'grip-vertical': return <svg {...svgProps}><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>;
+                case 'arrow-up': return <svg {...svgProps}><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>;
+                case 'arrow-down': return <svg {...svgProps}><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>;
+                case 'chevrons-up': return <svg {...svgProps}><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>;
+                case 'chevrons-down': return <svg {...svgProps}><polyline points="17 13 12 18 7 13"></polyline><polyline points="17 6 12 11 7 6"></polyline></svg>;
                 default: return null;
             }
         };
@@ -148,7 +154,7 @@
             );
         };
 
-        const ProjectCard = ({ project, isAdminMode, showAdminUI, config, onSetAsTop, onToggleVisibility, onStartEdit, onDelete, onOpenLightbox }) => {
+        const ProjectCard = ({ project, index, totalProjects, isAdminMode, showAdminUI, config, onSetAsTop, onToggleVisibility, onStartEdit, onDelete, onOpenLightbox, onMoveUp, onMoveDown }) => {
             const [selectedImgIdx, setSelectedImgIdx] = useState(0);
             const thumbRefs = useRef([]);
             const images = (project.imgs && project.imgs.length > 0) ? project.imgs : [project.coverImage || ''];
@@ -188,18 +194,28 @@
                         />
 
                         {isAdminMode && showAdminUI && (
-                            <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-white/40 backdrop-blur-md p-1 rounded-full shadow-lg border border-white/40">
-                                <button onClick={() => onSetAsTop(project.id)} title="置顶" className="w-8 h-8 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
-                                    <Icon name="arrow-up-circle" size={16} />
+                            <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-white/60 backdrop-blur-md p-1 rounded-full shadow-lg border border-white/60">
+                                {onMoveUp && (
+                                    <button onClick={() => onMoveUp(project.id)} disabled={index === 0} title="前移一位" className="w-7 h-7 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 disabled:opacity-30 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                        <Icon name="arrow-up" size={14} />
+                                    </button>
+                                )}
+                                {onMoveDown && (
+                                    <button onClick={() => onMoveDown(project.id)} disabled={index === totalProjects - 1} title="后移一位" className="w-7 h-7 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 disabled:opacity-30 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                        <Icon name="arrow-down" size={14} />
+                                    </button>
+                                )}
+                                <button onClick={() => onSetAsTop(project.id)} title="置顶作品" className="w-7 h-7 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                    <Icon name="arrow-up-circle" size={14} />
                                 </button>
-                                <button onClick={() => onStartEdit(project)} title="编辑" className="w-8 h-8 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
-                                    <Icon name="edit-3" size={16} />
+                                <button onClick={() => onStartEdit(project)} title="编辑" className="w-7 h-7 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                    <Icon name="edit-3" size={14} />
                                 </button>
-                                <button onClick={() => onToggleVisibility(project.id, project.isHidden)} title={project.isHidden ? "显示" : "隐藏"} className="w-8 h-8 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
-                                    <Icon name={project.isHidden ? "eye" : "eye-off"} size={16} />
+                                <button onClick={() => onToggleVisibility(project.id, project.isHidden)} title={project.isHidden ? "显示" : "隐藏"} className="w-7 h-7 rounded-full bg-white text-zinc-700 hover:bg-zinc-100 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                    <Icon name={project.isHidden ? "eye" : "eye-off"} size={14} />
                                 </button>
-                                <button onClick={() => onDelete(project.id)} title="删除" className="w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center shadow-sm transition-transform active:scale-95">
-                                    <Icon name="trash-2" size={16} />
+                                <button onClick={() => onDelete(project.id)} title="删除" className="w-7 h-7 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center shadow-sm transition-transform active:scale-95">
+                                    <Icon name="trash-2" size={14} />
                                 </button>
                             </div>
                         )}
@@ -242,6 +258,153 @@
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            );
+        };
+
+        const ReorderModal = ({ projects, onSaveOrder, onClose, isSyncing }) => {
+            const [list, setList] = useState([...projects]);
+            const [draggedIdx, setDraggedIdx] = useState(null);
+
+            const moveItem = (from, to) => {
+                if (to < 0 || to >= list.length) return;
+                const newList = [...list];
+                const [moved] = newList.splice(from, 1);
+                newList.splice(to, 0, moved);
+                setList(newList);
+            };
+
+            const moveToTop = (idx) => moveItem(idx, 0);
+            const moveToBottom = (idx) => moveItem(idx, list.length - 1);
+
+            const handleDragStart = (e, idx) => {
+                setDraggedIdx(idx);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+            };
+
+            const handleDrop = (e, targetIdx) => {
+                e.preventDefault();
+                if (draggedIdx === null || draggedIdx === targetIdx) return;
+                moveItem(draggedIdx, targetIdx);
+                setDraggedIdx(null);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[3000] bg-black/70 backdrop-blur-md flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-100">
+                        <div className="p-5 md:p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+                            <div>
+                                <h3 className="text-base md:text-lg font-black text-zinc-900 flex items-center gap-2">
+                                    <Icon name="sort" size={20} /> 手动调整作品排序
+                                </h3>
+                                <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                                    可通过拖拽卡片或使用排列按钮调整作品在画廊中的展示顺序
+                                </p>
+                            </div>
+                            <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-700 rounded-full hover:bg-zinc-200/60 transition-colors">
+                                <Icon name="x" size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-2.5">
+                            {list.map((proj, idx) => (
+                                <div
+                                    key={proj.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, idx)}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, idx)}
+                                    className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                                        draggedIdx === idx 
+                                            ? 'opacity-40 bg-zinc-100 border-zinc-400 scale-[0.99]' 
+                                            : 'bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-600 p-1">
+                                            <Icon name="grip-vertical" size={18} />
+                                        </div>
+                                        <span className="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-600 font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                                            {idx + 1}
+                                        </span>
+                                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-200">
+                                            <img src={proj.coverImage || (proj.imgs && proj.imgs[0])} className="w-full h-full object-cover" alt="" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="text-xs md:text-sm font-bold text-zinc-900 truncate">{proj.title || '未命名作品'}</h4>
+                                            <p className="text-[10px] text-zinc-400 font-medium flex items-center gap-2">
+                                                <span>{proj.type || '未分类'}</span> • <span>{proj.year}.{String(proj.month||1).padStart(2, '0')}</span>
+                                                {proj.isHidden && <span className="text-amber-500 font-bold">(隐藏中)</span>}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button 
+                                            type="button"
+                                            disabled={idx === 0}
+                                            onClick={() => moveToTop(idx)}
+                                            title="移至最顶"
+                                            className="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 disabled:opacity-30 transition-colors"
+                                        >
+                                            <Icon name="chevrons-up" size={14} />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            disabled={idx === 0}
+                                            onClick={() => moveItem(idx, idx - 1)}
+                                            title="向上移动"
+                                            className="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 disabled:opacity-30 transition-colors"
+                                        >
+                                            <Icon name="arrow-up" size={14} />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            disabled={idx === list.length - 1}
+                                            onClick={() => moveItem(idx, idx + 1)}
+                                            title="向下移动"
+                                            className="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 disabled:opacity-30 transition-colors"
+                                        >
+                                            <Icon name="arrow-down" size={14} />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            disabled={idx === list.length - 1}
+                                            onClick={() => moveToBottom(idx)}
+                                            title="移至最底"
+                                            className="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 disabled:opacity-30 transition-colors"
+                                        >
+                                            <Icon name="chevrons-down" size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="p-4 md:p-5 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
+                            <button 
+                                type="button"
+                                onClick={onClose}
+                                className="px-5 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 font-bold text-xs transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button 
+                                type="button"
+                                disabled={isSyncing}
+                                onClick={() => onSaveOrder(list)}
+                                className="px-6 py-2.5 bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                <Icon name="check-circle" size={14} />
+                                {isSyncing ? "正在保存顺序到云端..." : "保存全新顺序并同步至 GitHub"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             );
@@ -404,6 +567,7 @@
             const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
             const [confirmModal, setConfirmModal] = useState({ show: false, title: '', onConfirm: null });
             const [shareModal, setShareModal] = useState(false); 
+            const [reorderModalOpen, setReorderModalOpen] = useState(false);
             const [activeLightbox, setActiveLightbox] = useState({ open: false, project: null, index: 0 });
 
             const [config, setConfig] = useState(LOCAL_FALLBACK_CONFIG);
@@ -617,7 +781,7 @@
                     }
                 } catch(e) { 
                     triggerToast("已进入展示视图", "info"); 
-                } fontFinally: { 
+                } finally { 
                     setIsLoaded(true); 
                 }
             };
@@ -707,6 +871,41 @@
                 } finally { 
                     setIsSyncing(false); 
                 }
+            };
+
+            const handleSaveNewOrder = async (reorderedList) => {
+                if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
+                
+                // Assign priority order dynamically so index 0 has the highest value
+                const baseTime = Date.now();
+                const updatedProjs = reorderedList.map((item, idx) => ({
+                    ...item,
+                    priority: baseTime - idx * 1000
+                }));
+
+                try {
+                    await saveDataToGitHub(config, categories, updatedProjs);
+                    setProjects(updatedProjs);
+                    triggerToast("🎉 作品顺序已修改成功并保存至云端！", "success");
+                    setReorderModalOpen(false);
+                } catch (err) {
+                    triggerToast(`修改排序失败: ${err.message}`, "error");
+                }
+            };
+
+            const handleMoveCardQuick = async (projId, direction) => {
+                if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
+                const currentIdx = projects.findIndex(p => p.id === projId);
+                if (currentIdx === -1) return;
+                
+                const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+                if (targetIdx < 0 || targetIdx >= projects.length) return;
+
+                const newList = [...projects];
+                const [moved] = newList.splice(currentIdx, 1);
+                newList.splice(targetIdx, 0, moved);
+
+                await handleSaveNewOrder(newList);
             };
 
             const handleSetupSubmit = (e) => {
@@ -843,7 +1042,10 @@
 
             const setAsTop = async (projectId) => {
                 if (!accessToken) return triggerToast("❌ 请先在顶部配置 GitHub Token！", "error");
-                const nextProjs = projects.map(p => p.id === projectId ? { ...p, priority: Date.now() + 1e14 } : p);
+                const targetProj = projects.find(p => p.id === projectId);
+                if (!targetProj) return;
+                const otherProjs = projects.filter(p => p.id !== projectId);
+                const nextProjs = [{ ...targetProj, priority: Date.now() + 1e14 }, ...otherProjs];
                 try { 
                     await saveDataToGitHub(config, categories, nextProjs); 
                     setProjects(nextProjs); 
@@ -990,16 +1192,6 @@
                     const isPinnedB = (b.priority || 0) > 1e13;
                     if (isPinnedA && !isPinnedB) return -1;
                     if (!isPinnedA && isPinnedB) return 1;
-                    if (isPinnedA && isPinnedB) return (b.priority || 0) - (a.priority || 0);
-
-                    const yearA = parseInt(a.year, 10) || 0;
-                    const yearB = parseInt(b.year, 10) || 0;
-                    if (yearB !== yearA) return yearB - yearA;
-
-                    const monthA = parseInt(a.month, 10) || 1;
-                    const monthB = parseInt(b.month, 10) || 1;
-                    if (monthB !== monthA) return monthB - monthA;
-
                     return (b.priority || 0) - (a.priority || 0);
                 });
 
@@ -1007,7 +1199,7 @@
 
             const masonryColumns = Array.from({ length: columnCount }, () => []);
             displayProjects.forEach((project, index) => {
-                masonryColumns[index % columnCount].push(project);
+                masonryColumns[index % columnCount].push({ project, index });
             });
 
             if (!owner || !repo) {
@@ -1124,7 +1316,14 @@
                                         <h3 className="text-xl md:text-2xl font-black mb-1">GitHub 工作台 (画廊定制与内容发布)</h3>
                                         <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">拖拽上传本地图片或选择云端直连，即时排版呈现。</p>
                                     </div>
-                                    <button onClick={() => setShareModal(true)} className="w-full md:w-auto px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"><Icon name="share-2" size={14}/> 分享空间地址</button>
+                                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                        <button onClick={() => setReorderModalOpen(true)} className="flex-1 md:flex-none px-6 py-4 bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
+                                            <Icon name="sort" size={16}/> 手动调整作品顺序
+                                        </button>
+                                        <button onClick={() => setShareModal(true)} className="flex-1 md:flex-none px-6 py-4 bg-white text-zinc-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
+                                            <Icon name="share-2" size={14}/> 分享空间地址
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
@@ -1443,6 +1642,7 @@
                             </div>
                         )}
 
+                        {/* Banner Presentation */}
                         <div className="mb-8 md:mb-14 text-left animate-in fade-in duration-1000">
                             {(config?.showBanner !== false) && (() => {
                                 const headerImgs = (config?.header?.headerImages && config.header.headerImages.length > 0) 
@@ -1531,13 +1731,16 @@
                             </div>
                         </div>
 
+                        {/* Gallery Grid */}
                         <div className="flex gap-4 md:gap-6 items-start w-full">
                             {masonryColumns.map((col, colIdx) => (
                                 <div key={colIdx} className="flex flex-col gap-4 md:gap-6 flex-1 min-w-0">
-                                    {col.map(project => (
+                                    {col.map(({ project, index }) => (
                                         <ProjectCard
                                             key={project.id}
                                             project={project}
+                                            index={index}
+                                            totalProjects={displayProjects.length}
                                             isAdminMode={isAdminMode}
                                             showAdminUI={showAdminUI}
                                             config={config}
@@ -1545,6 +1748,8 @@
                                             onToggleVisibility={toggleVisibility}
                                             onStartEdit={handleStartEdit}
                                             onDelete={handleDeleteProject}
+                                            onMoveUp={(id) => handleMoveCardQuick(id, 'up')}
+                                            onMoveDown={(id) => handleMoveCardQuick(id, 'down')}
                                             onOpenLightbox={(proj, idx) => setActiveLightbox({ open: true, project: proj, index: idx })}
                                         />
                                     ))}
@@ -1563,6 +1768,7 @@
                         )}
                     </main>
 
+                    {/* Toast Notification */}
                     {toast.show && (
                         <div className={`fixed bottom-6 right-6 z-[3000] px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 animate-in slide-in-from-bottom-5 duration-300 ${
                             toast.type === 'success' ? 'bg-zinc-950 text-white' : 
@@ -1573,6 +1779,7 @@
                         </div>
                     )}
 
+                    {/* Confirmation Modal */}
                     {confirmModal.show && (
                         <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-zinc-100 text-center animate-in zoom-in-95 duration-200">
@@ -1585,6 +1792,7 @@
                         </div>
                     )}
 
+                    {/* Share Modal */}
                     {shareModal && (
                         <div className="fixed inset-0 z-[3000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                             <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-zinc-100 text-left animate-in zoom-in-95 duration-200">
@@ -1594,26 +1802,37 @@
                                 </div>
                                 <p className="text-xs text-zinc-500 mb-6 leading-relaxed">生成访问此画廊特制的专属链接，可设置时效防护：</p>
                                 <div className="space-y-3">
-                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-xl font-bold text-xs hover:bg-zinc-800 flex items-center justify-center gap-2 shadow-md">
-                                        <Icon name="link" size={14} /> 复制永久公开访问链接
+                                    <button onClick={() => handleCopyShareLink(0)} className="w-full py-3.5 bg-zinc-950 text-white rounded-xl font-bold text-xs hover:bg-zinc-800 transition-colors shadow-sm">
+                                        🔗 生成公开永久链接
                                     </button>
-                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                        <Icon name="clock" size={14} /> 复制 7 天有效临时链接
+                                    <button onClick={() => handleCopyShareLink(1)} className="w-full py-3 border border-zinc-200 text-zinc-700 rounded-xl font-bold text-xs hover:bg-zinc-50 transition-colors">
+                                        ⏱️ 生成 24 小时临时分享链接
                                     </button>
-                                    <button onClick={() => handleCopyShareLink(30)} className="w-full py-3.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-                                        <Icon name="clock" size={14} /> 复制 30 天有效临时链接
+                                    <button onClick={() => handleCopyShareLink(7)} className="w-full py-3 border border-zinc-200 text-zinc-700 rounded-xl font-bold text-xs hover:bg-zinc-50 transition-colors">
+                                        ⏱️ 生成 7 天临时分享链接
                                     </button>
                                 </div>
                             </div>
                         </div>
                     )}
 
+                    {/* Reorder Modal */}
+                    {reorderModalOpen && (
+                        <ReorderModal
+                            projects={projects}
+                            isSyncing={isSyncing}
+                            onClose={() => setReorderModalOpen(false)}
+                            onSaveOrder={handleSaveNewOrder}
+                        />
+                    )}
+
+                    {/* Lightbox Overlay */}
                     {activeLightbox.open && (
                         <LightboxModal
                             project={activeLightbox.project}
                             initialIndex={activeLightbox.index}
                             watermark={config?.watermark}
-                            watermarkFontSize={config?.watermarkFontSize || 24}
+                            watermarkFontSize={config?.watermarkFontSize}
                             onClose={() => setActiveLightbox({ open: false, project: null, index: 0 })}
                         />
                     )}
