@@ -61,13 +61,13 @@
         const LOCAL_FALLBACK_PROJECTS = [
             {
                 id: 'local_demo',
-                title: '明星年终送礼清单',
-                description: '这是一个演示项目。长图与标准图现已完美适配垂直滚动与云端卡片预览。',
-                type: 'H5长图',
+                title: '示例作品 - 画廊已就绪',
+                description: '这是一个演示项目。如果在云端加载失败，将展示此默认示例。',
+                type: '3D作品',
                 year: 2025,
                 month: 12,
                 videoUrl: '',
-                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1800" viewBox="0 0 800 1800"><rect width="800" height="1800" fill="%23f4f4f5"/><text x="50%25" y="10%25" font-family="sans-serif" font-weight="bold" font-size="28" fill="%23a1a1aa" text-anchor="middle">H5长图顶部 (支持上下滚动)</text><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="28" fill="%23a1a1aa" text-anchor="middle">长图中部内容</text><text x="50%25" y="90%25" font-family="sans-serif" font-weight="bold" font-size="28" fill="%23a1a1aa" text-anchor="middle">长图底部内容</text></svg>',
+                coverImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><rect width="800" height="1200" fill="%23f4f4f5"/><text x="50%25" y="50%25" font-family="sans-serif" font-weight="bold" font-size="28" fill="%23a1a1aa" text-anchor="middle">PRO.FOLIO GALLERY</text></svg>',
                 imgs: []
             }
         ];
@@ -538,8 +538,9 @@
             }, []);
 
             const fetchShaOnly = async (own, rep, br, tok) => {
+                if (!tok) return;
                 try {
-                    const headers = tok ? { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } : {};
+                    const headers = { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' };
                     const res = await fetch(`https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${Date.now()}`, { headers });
                     if (res.ok) {
                         const data = await res.json();
@@ -552,77 +553,69 @@
             };
 
             const loadDataFromGitHub = async (own, rep, br, tok) => {
-                const useApiFirst = !!tok;
-                const cacheBuster = `${Date.now()}_${Math.random()}`;
-                const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${cacheBuster}`;
-                const rawUrl = `https://raw.githubusercontent.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
-                const tokenHeaders = tok ? { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } : {};
-
-                if (useApiFirst) {
+                const cacheBuster = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+                
+                // 1. 如果有 Token (管理员权限)，走 API 通道
+                if (tok) {
+                    const apiUrl = `https://api.github.com/repos/${own}/${rep}/contents/${path}?ref=${br}&t=${cacheBuster}`;
                     try {
-                        const res = await fetch(apiUrl, { headers: tokenHeaders });
-                        if (!res.ok) {
-                            if (res.status === 404) {
-                                setProjects(LOCAL_FALLBACK_PROJECTS); 
-                                setCategories(LOCAL_FALLBACK_CATEGORIES); 
-                                setConfig(LOCAL_FALLBACK_CONFIG); 
-                                setFileSha(''); 
-                                localStorage.removeItem('github_file_sha');
-                                triggerToast("仓库连接成功！目前为全新空间。", "success");
-                                setIsLoaded(true); 
+                        const res = await fetch(apiUrl, { 
+                            headers: { 'Authorization': `Bearer ${tok.trim()}`, 'Accept': 'application/vnd.github.v3+json' } 
+                        });
+                        if (res.ok) {
+                            const apiData = await res.json();
+                            if (apiData.sha) { 
+                                setFileSha(apiData.sha); 
+                                localStorage.setItem('github_file_sha', apiData.sha); 
+                            }
+                            const decodedContent = b64DecodeUnicode(apiData.content);
+                            if (decodedContent) {
+                                applyLoadedData(JSON.parse(decodedContent));
+                                setIsLoaded(true);
                                 return;
                             }
-                            throw new Error(`GitHub 接口状态异常: ${res.status}`);
                         }
-                        const apiData = await res.json();
-                        if (apiData.sha) { 
-                            setFileSha(apiData.sha); 
-                            localStorage.setItem('github_file_sha', apiData.sha); 
-                        }
-                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content)));
-                        setIsLoaded(true); 
-                        return;
                     } catch(e) {
-                        try {
-                            const resRaw = await fetch(rawUrl);
-                            if (resRaw.status === 404) {
-                                setProjects(LOCAL_FALLBACK_PROJECTS); 
-                                setCategories(LOCAL_FALLBACK_CATEGORIES); 
-                                setConfig(LOCAL_FALLBACK_CONFIG); 
-                                setFileSha('');
-                                setIsLoaded(true); 
-                                return;
-                            }
-                            if (!resRaw.ok) throw new Error(`Raw直连失败`);
-                            applyLoadedData(await resRaw.json()); 
-                            fetchShaOnly(own, rep, br, tok); 
-                            setIsLoaded(true); 
-                            return;
-                        } catch(rawErr) { 
-                            triggerToast(`获取数据失败，请检查 Token 权限或仓库设置。`, "error"); 
-                        }
+                        console.warn("API 加载失败，回退到 CDN 通道", e);
                     }
                 }
 
+                // 2. 普通访客或 API 失败时：使用 Raw + CDN 加载 (免 Token，不受 Rate Limit 限制)
+                const rawUrl = `https://raw.githubusercontent.com/${own}/${rep}/${br}/${path}?t=${cacheBuster}`;
+                const cdnUrl = `https://cdn.jsdelivr.net/gh/${own}/${rep}@${br}/${path}?t=${cacheBuster}`;
+
                 try {
-                    const res = await fetch(apiUrl, { headers: tokenHeaders });
+                    // 尝试 Raw 链接
+                    let res = await fetch(rawUrl);
+                    if (!res.ok) {
+                        // 如果 Raw 失败，尝试 CDN 镜像 (国内友好)
+                        res = await fetch(cdnUrl);
+                    }
+
                     if (res.ok) {
-                        const apiData = await res.json();
-                        if (apiData.sha) {
-                            setFileSha(apiData.sha);
-                        }
-                        applyLoadedData(JSON.parse(b64DecodeUnicode(apiData.content))); 
-                        setIsLoaded(true); 
+                        const json = await res.json();
+                        applyLoadedData(json);
+                        fetchShaOnly(own, rep, br, tok);
+                        setIsLoaded(true);
+                        return;
+                    } else if (res.status === 404) {
+                        // 仓库为空时提供初始化状态
+                        setProjects(LOCAL_FALLBACK_PROJECTS); 
+                        setCategories(LOCAL_FALLBACK_CATEGORIES); 
+                        setConfig(LOCAL_FALLBACK_CONFIG);
+                        setIsLoaded(true);
                         return;
                     }
-                } catch(e) { 
-                    triggerToast("已进入展示视图", "info"); 
-                } fontFinally: { 
-                    setIsLoaded(true); 
+                } catch(err) {
+                    console.error("所有数据获取渠道均失败", err);
+                    triggerToast("作品数据读取异常，请检查仓库名或网络设置", "error");
+                } finally {
+                    setIsLoaded(true);
                 }
             };
 
             const applyLoadedData = (data) => {
+                if (!data) return;
                 if (data.config) setConfig(data.config);
                 if (data.categories) setCategories(data.categories);
                 if (data.projects) setProjects(data.projects);
